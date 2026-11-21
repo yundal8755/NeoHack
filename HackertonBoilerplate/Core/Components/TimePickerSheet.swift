@@ -112,6 +112,8 @@ extension View {
             .presentationDetents([.height(TimePickerSheet.sheetHeight)])
             .presentationDragIndicator(.visible)
             .presentationCornerRadius(AppRadius.sheet)
+            // iOS 26 기본 시트는 반투명 유리 배경이라 Figma처럼 흰 배경으로 채운다.
+            .presentationBackground(AppColor.background)
         }
     }
 }

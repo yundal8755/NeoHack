@@ -106,6 +106,11 @@ private struct UnusedUserRepository: UserRepository {
         throw CancellationError()
     }
 
+    func profile(publicID: String) async throws -> UserEntity {
+        Issue.record("profile(publicID:)가 호출되면 안 됩니다.")
+        throw CancellationError()
+    }
+
     func me() async throws -> UserEntity {
         Issue.record("me가 호출되면 안 됩니다.")
         throw CancellationError()
@@ -113,8 +118,13 @@ private struct UnusedUserRepository: UserRepository {
 }
 
 private struct UnusedImageRepository: ImageRepository {
-    func upload(input: ImageUploadInput) async throws -> UploadedImageEntity {
-        Issue.record("upload가 호출되면 안 됩니다.")
+    func uploadGeneral(input: ImageUploadInput) async throws -> UploadedImageEntity {
+        Issue.record("uploadGeneral가 호출되면 안 됩니다.")
+        throw CancellationError()
+    }
+
+    func uploadStep(input: ImageUploadInput) async throws -> UploadedImageEntity {
+        Issue.record("uploadStep가 호출되면 안 됩니다.")
         throw CancellationError()
     }
 

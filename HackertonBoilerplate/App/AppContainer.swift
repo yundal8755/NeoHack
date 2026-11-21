@@ -31,15 +31,15 @@ final class AppContainer {
         let images: any ImageRepository
     }
 
-    func profiles(deviceToken: String) -> any UserRepository {
-        UserRepositoryImpl(networkManager: networkManager, deviceToken: { deviceToken })
+    var testAccounts: any TestAccountRepository {
+        TestAccountRepositoryImpl(network: networkManager)
     }
 
-    func session(token: String, userID: String) -> ProfileRepositories {
+    func session(token: String) -> ProfileRepositories {
         ProfileRepositories(
-            users: UserRepositoryImpl(networkManager: networkManager, deviceToken: { token }, userID: userID),
-            routines: RoutineRepositoryImpl(networkManager: networkManager, deviceToken: { token }, userID: userID),
-            comments: RoutineCommentRepositoryImpl(networkManager: networkManager, deviceToken: { token }, userID: userID),
-            images: ImageRepositoryImpl(networkManager: networkManager, deviceToken: { token }, userID: userID))
+            users: UserRepositoryImpl(networkManager: networkManager, accessToken: { token }),
+            routines: RoutineRepositoryImpl(networkManager: networkManager, accessToken: { token }),
+            comments: RoutineCommentRepositoryImpl(networkManager: networkManager, accessToken: { token }),
+            images: ImageRepositoryImpl(networkManager: networkManager, accessToken: { token }))
     }
 }

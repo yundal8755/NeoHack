@@ -13,7 +13,8 @@ struct MyProfileReducerTests {
         #expect(state.visibleRoutines.count == 5)
         #expect(state.visibleRoutines.allSatisfy { !$0.detail.isOwner && $0.detail.participation != .notJoined })
         _ = reducer.reduce(&state, with: .editTapped)
-        #expect(state.notice != nil)
+        #expect(state.notice == "프로필 편집 화면은 준비 중입니다.")
+        #expect(state.edit == nil)
         _ = reducer.reduce(&state, with: .noticeDismissed)
         #expect(state.notice == nil)
     }

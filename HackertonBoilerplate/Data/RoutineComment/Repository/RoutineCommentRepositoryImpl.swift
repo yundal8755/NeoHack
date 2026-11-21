@@ -2,22 +2,21 @@ import Foundation
 
 final class RoutineCommentRepositoryImpl: RoutineCommentRepository {
     private let network: NetworkManager
-    private let userID: String?
-    private let deviceToken: () throws -> String
+    private let accessToken: (() throws -> String)?
 
-    init(networkManager: NetworkManager, deviceToken: @escaping () throws -> String, userID: String? = nil) {
+    init(networkManager: NetworkManager, accessToken: (() throws -> String)? = nil) {
         self.network = networkManager
-        self.deviceToken = deviceToken
-        self.userID = userID
+        self.accessToken = accessToken
     }
 
     private func headers() throws -> [String: String] {
-        try Mapping.deviceHeaders(deviceToken, userID: userID)
+        guard let accessToken else { throw DataContractError.missingAccessToken }
+        return try Mapping.bearerHeaders(accessToken)
     }
 
     func list(routineID: String) async throws -> [RoutineCommentEntity] {
         let response = try await network.request(
-            RoutineCommentEndpoint.list(routineID: routineID, headers: headers()),
+            RoutineCommentEndpoint.list(routineID: routineID, headers: accessToken == nil ? [:] : headers()),
             as: APIResponseDTO<[RoutineCommentResponseDTO]>.self)
         return try response.value().map(RoutineCommentMapper.map)
     }

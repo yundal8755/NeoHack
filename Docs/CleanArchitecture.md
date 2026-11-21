@@ -32,8 +32,8 @@ Domain 입력 → RepositoryImpl → 요청 DTO → Endpoint → NetworkManager 
 서버 → 응답 DTO → 성공 여부 확인 → Mapper → Domain Entity
 ```
 
-- RepositoryImpl은 NetworkManager와 `deviceToken: () throws -> String`을 생성자로 받는다. 생성 자체로 요청하거나 토큰을 생성·저장하지 않는다.
-- 슬롯별로 검증된 기기 토큰과 사용자 ID를 Keychain에 저장한다. 계정을 선택한 후 인증 요청에 X-Device-Token과 X-User-Id를 함께 전달한다. 현재 서비스는 기존 Bearer 인증·갱신과 별개다. 빈 토큰과 잘못된 헤더 값은 요청 전에 거부한다.
+- RepositoryImpl은 NetworkManager와 `accessToken: () throws -> String`을 생성자로 받는다. 생성 자체로 요청하거나 토큰을 생성·저장하지 않는다.
+- ProfileAccounts가 서버의 계정을 점유하고 세션 토큰을 메모리에 보관한다. AppContainer는 인증 Repository에 해당 세션의 Bearer 토큰을 전달한다. ProfileAccounts는 30초마다 계정 사용권을 갱신한다. 갱신이 중단되면 사용권은 서버에서 만료된다.
 - multipart 업로드는 NetworkManager의 공통 Alamofire Session을 사용한다. 작성 화면은 사진 업로드 결과를 카드 순서대로 모아 루틴을 저장한다. 다시 시도할 때 이미 받은 imageId를 재사용한다.
 - APIResponseDTO가 isSuccess와 필수 result를 확인한다. 삭제는 APIDeleteResponseDTO로 미정의 result를 무시한다.
 - 응답 DTO의 Optional은 Swagger required를 따른다. Mapper는 식별자와 핵심 값(사용자 닉네임·루틴 제목·댓글 본문) 누락을 오류로 처리한다. 나머지 선택 값을 임의의 0·빈 문자열로 채우지 않는다.

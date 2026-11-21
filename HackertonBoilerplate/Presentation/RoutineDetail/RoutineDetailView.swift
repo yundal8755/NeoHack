@@ -12,10 +12,12 @@ struct RoutineDetailView: View {
     @Environment(\.dismiss) private var dismiss
     @FocusState private var isCommentFocused: Bool
 
+    private let onBack: (() -> Void)?
     private let onDelete: () -> Void
 
-    init(store: StoreOf<RoutineDetailReducer>, onDelete: @escaping () -> Void = {}) {
+    init(store: StoreOf<RoutineDetailReducer>, onBack: (() -> Void)? = nil, onDelete: @escaping () -> Void = {}) {
         self.store = store
+        self.onBack = onBack
         self.onDelete = onDelete
     }
 
@@ -23,8 +25,10 @@ struct RoutineDetailView: View {
         VStack(spacing: 0) {
             AppTopBar(
                 store.state.title,
-                leading: .asset("CaretLeft", label: "뒤로가기") { dismiss() },
-                trailing: .asset("DotsThree", label: "더보기") { isRoutineMenuPresented = true }
+                leading: .asset("CaretLeft", label: "뒤로가기") { closeDetail() },
+                trailing: .asset("DotsThree", label: "더보기", isEnabled: !store.state.isLive || store.state.isOwner) {
+                    if store.state.isOwner && store.state.isLive { isRoutineMenuPresented = true }
+                }
             )
 
             if store.state.isLive && !store.state.loaded {
@@ -101,8 +105,8 @@ struct RoutineDetailView: View {
         }
         .onChange(of: store.state.isDeleted) { _, deleted in
             if deleted {
-                dismiss()
                 onDelete()
+                closeDetail()
             }
         }
         .sheet(isPresented: $isCommentsPresented) {
@@ -114,6 +118,7 @@ struct RoutineDetailView: View {
         }
         .background(AppColor.background)
         .toolbar(.hidden, for: .navigationBar)
+        .accessibilityElement(children: .contain)
         .accessibilityIdentifier(AccessibilityID.RoutineDetail.screen)
         .feedbackPopup(Binding(
             get: {
@@ -121,6 +126,10 @@ struct RoutineDetailView: View {
             },
             set: { if $0 == nil { store.send(.noticeDismissed) } }
         ))
+    }
+
+    private func closeDetail() {
+        if let onBack { onBack() } else { dismiss() }
     }
 
     private func stepCard(_ step: RoutineDetailReducer.Step, number: Int) -> some View {

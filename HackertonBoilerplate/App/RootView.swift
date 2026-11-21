@@ -29,39 +29,30 @@ struct RootView: View {
     @ViewBuilder
     private var liveContent: some View {
         if let session = accounts.session {
-            LiveHome(session: session, onSwitchAccount: accounts.signOut)
+            LiveHome(session: session)
                 .id(session.id)
         } else {
             VStack(spacing: AppSpacing.md) {
                 Text("사용자 선택").appFont(AppFont.body1)
-                ForEach(ProfileAccounts.Slot.allCases) { item in
-                    PrimaryButton(item.rawValue) { accounts.choose(item) }
-                        .disabled(accounts.isLoading)
-                        .accessibilityIdentifier("account.slot.\(item.rawValue)")
+                ForEach(accounts.entries) { account in
+                    PrimaryButton(account.available ? account.nickname : "\(account.nickname) (사용 중)") {
+                        accounts.choose(account)
+                    }
+                    .disabled(accounts.isLoading || !account.available)
+                    .accessibilityIdentifier("account.slot.\(account.slot)")
                 }
-                if accounts.needsToken {
-                    SecureField("기기 토큰", text: $accounts.token)
-                        .textInputAutocapitalization(.never)
-                        .autocorrectionDisabled()
-                        .textFieldStyle(.roundedBorder)
-                        .disabled(accounts.isLoading)
-                        .onChange(of: accounts.token) { _, _ in accounts.tokenChanged() }
-                        .accessibilityIdentifier("account.token")
-                    PrimaryButton("프로필 확인", action: accounts.submitToken)
-                        .disabled(
-                            accounts.isLoading || accounts.token.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-                        )
+                if accounts.entries.isEmpty && !accounts.isLoading && accounts.error == nil {
+                    Text("등록된 테스트 계정이 없어요.")
                 }
-                ForEach(accounts.candidates, id: \.id) { user in
-                    PrimaryButton(user.nickname) { accounts.select(user) }
-                        .disabled(accounts.isLoading)
-                }
+                Button("계정 목록 새로고침") { Task { await accounts.load() } }
+                    .disabled(accounts.isLoading)
                 if accounts.isLoading { ProgressView() }
                 if let error = accounts.error { Text(error).foregroundStyle(AppColor.textSecondary) }
             }
             .padding(AppSpacing.md)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .background(AppColor.background)
+            .task { if accounts.entries.isEmpty { await accounts.load() } }
         }
     }
 
@@ -86,19 +77,17 @@ final class ProfileSession: Identifiable {
 
 private struct LiveHome: View {
     let session: ProfileSession
-    let onSwitchAccount: () -> Void
     @StateObject private var store: StoreOf<HomeReducer>
 
-    init(session: ProfileSession, onSwitchAccount: @escaping () -> Void) {
+    init(session: ProfileSession) {
         self.session = session
-        self.onSwitchAccount = onSwitchAccount
         _store = StateObject(
             wrappedValue: StoreOf<HomeReducer>(
                 state: .init(), reducer: HomeReducer(repository: session.repositories.routines)))
     }
 
     var body: some View {
-        HomeView(store: store, session: session, onSwitchAccount: onSwitchAccount)
+        HomeView(store: store, session: session)
     }
 }
 

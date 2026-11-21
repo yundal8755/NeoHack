@@ -65,6 +65,7 @@ nonisolated struct MyProfileReducer: Reducer {
     enum Action {
         case tabSelected(Tab)
         case editTapped
+        case beginEditing
         case nicknameChanged(String)
         case bioChanged(String)
         case photoChanged(ImageUploadInput)
@@ -80,10 +81,9 @@ nonisolated struct MyProfileReducer: Reducer {
         switch action {
         case let .tabSelected(tab): state.selectedTab = tab
         case .editTapped:
-            guard users != nil else {
-                state.notice = "프로필 편집은 연결된 계정에서 사용할 수 있어요."
-                return .none
-            }
+            state.notice = "프로필 편집 화면은 준비 중입니다."
+        case .beginEditing:
+            guard users != nil else { return .none }
             state.edit = Edit(nickname: state.nickname, bio: state.introduction)
             state.editError = nil
         case let .nicknameChanged(value):

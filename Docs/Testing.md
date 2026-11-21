@@ -127,4 +127,5 @@ git config core.hooksPath .githooks
 
 DataDomain 테스트는 URLProtocol과 주입한 Alamofire Session을 사용하여 실서버에 접속하지 않는다. Snapshot·UI 테스트와 별도로 실행하며 기준 이미지를 기록하지 않는다. 기본 iOS 26.2 런타임이 없으면 TEST_DESTINATION에 설치된 시뮬레이터를 지정한다.
 
-실제 계정 선택과 Keychain 저장을 시뮬레이터에서 확인할 때는 Xcode의 기본 서명으로 실행한다. 서명을 끈 빌드는 시뮬레이터에서 Keychain 저장에 실패할 수 있다. 공개 데모 프로필 정보는 Swagger의 헤더 예시를 사용한다.
+
+실제 서버로 확인할 때는 시뮬레이터에서 사용 가능한 테스트 계정을 선택한다. 앱을 종료해 갱신이 중단되면 사용권은 서버에서 만료된다.

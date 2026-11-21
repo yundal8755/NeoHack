@@ -5,25 +5,26 @@ import SwiftUI
 struct HomeView: View {
     @ObservedObject private var store: StoreOf<HomeReducer>
     private let session: ProfileSession?
-    private let onSwitchAccount: () -> Void
     @State private var isPickingRoutineImages = false
-    @State private var navigationPath: [String] = []
+    @State private var navigationPath: [DetailRoute] = []
+    @State private var deletedRoutineID: String?
     @State private var isHomeDragging = false
     @State private var isSortExpanded = false
     @State private var isProfilePresented = false
 
-    init(store: StoreOf<HomeReducer>, session: ProfileSession? = nil, onSwitchAccount: @escaping () -> Void = {}) {
+    init(store: StoreOf<HomeReducer>, session: ProfileSession? = nil) {
         self.store = store
         self.session = session
-        self.onSwitchAccount = onSwitchAccount
     }
 
     var body: some View {
         NavigationStack(path: $navigationPath) {
             VStack(spacing: 0) {
-                AppTopBar("서비스명", trailing: .asset("User", label: "마이프로필") {
-                    isProfilePresented = true
-                })
+                AppTopBar(
+                    "서비스명",
+                    trailing: .asset("User", label: "마이프로필") {
+                        isProfilePresented = true
+                    })
 
                 sortPicker
 
@@ -31,7 +32,9 @@ struct HomeView: View {
             }
             .background(AppColor.background)
             .overlay(alignment: .bottomTrailing) {
-                Button { isPickingRoutineImages = true } label: {
+                Button {
+                    isPickingRoutineImages = true
+                } label: {
                     Image("HomeCreateButton")
                         .frame(width: 55, height: 55)
                 }
@@ -40,26 +43,32 @@ struct HomeView: View {
                 .accessibilityIdentifier(AccessibilityID.Home.createButton)
                 .padding(AppSpacing.md)
             }
-            .routineCreateSwipe(profile: profileView, isProfilePresented: $isProfilePresented, isDragging: $isHomeDragging) {
+            .routineCreateSwipe(
+                profile: profileView, isProfilePresented: $isProfilePresented, isDragging: $isHomeDragging
+            ) {
                 isPickingRoutineImages = true
             }
             .toolbar(.hidden, for: .navigationBar)
-            .navigationDestination(for: String.self) { id in
+            .navigationDestination(for: DetailRoute.self) { route in
                 if let session {
-                    RoutineDetailDestination(id: id, session: session) { store.send(.removed(id)) }
-                } else if let routine = store.state.routines.first(where: { $0.id == id }) {
-                    RoutineDetailDestination(state: routine.detail)
+                    RoutineDetailDestination(id: route.id, session: session, onBack: closeDetail) {
+                        store.send(.removed(route.id))
+                        deletedRoutineID = route.id
+                    }
+                    .id(route.id)
+                } else if let detail = route.preview {
+                    RoutineDetailDestination(state: detail, onBack: closeDetail)
+                        .id(route.id)
                 }
             }
         }
         .onChange(of: isProfilePresented) { _, presented in
-            if presented { navigationPath.removeAll() }
-            else { store.send(.refresh) }
+            if !presented { store.send(.refresh) }
         }
         .task { store.send(.appeared) }
         .routineCreateFlow(isPickingImages: $isPickingRoutineImages, repositories: session?.repositories) { id in
             store.send(.refresh)
-            navigationPath.append(id)
+            if navigationPath.isEmpty { navigationPath = [DetailRoute(id: id)] }
         }
         .accessibilityIdentifier(AccessibilityID.Root.homeScreen)
     }
@@ -67,14 +76,30 @@ struct HomeView: View {
     @ViewBuilder
     private var profileView: some View {
         if let session {
-            MyProfileView(session: session, onBack: { isProfilePresented = false }, onSwitchAccount: onSwitchAccount)
+            MyProfileView(
+                session: session, deletedRoutineID: deletedRoutineID, onRoutineSelected: showRoutine,
+                onBack: closeProfile)
         } else {
             #if DEBUG
-            MyProfileView(state: MockRoutineData.profile) { isProfilePresented = false }
+                MyProfileView(
+                    state: MockRoutineData.profile, onRoutineSelected: showRoutine, onBack: closeProfile)
             #else
-            EmptyView(title: "계정을 선택해 주세요", message: "")
+                EmptyView(title: "계정을 선택해 주세요", message: "")
             #endif
         }
+    }
+
+    private func closeDetail() { navigationPath.removeAll() }
+
+    private func closeProfile() {
+        closeDetail()
+        isHomeDragging = false
+        isProfilePresented = false
+    }
+
+    private func showRoutine(_ routine: HomeReducer.Routine) {
+        guard navigationPath.isEmpty else { return }
+        navigationPath = [DetailRoute(id: routine.id, preview: session == nil ? routine.detail : nil)]
     }
 
     private var sortPicker: some View {
@@ -153,8 +178,9 @@ struct HomeView: View {
                 }
                 ForEach(store.state.routines) { routine in
                     Button {
-                        guard !isHomeDragging, !isProfilePresented, !isPickingRoutineImages else { return }
-                        navigationPath.append(routine.id)
+                        guard navigationPath.isEmpty, !isHomeDragging, !isProfilePresented, !isPickingRoutineImages
+                        else { return }
+                        showRoutine(routine)
                     } label: {
                         RoutineListRow(routine: routine)
                     }
@@ -186,8 +212,16 @@ struct HomeView: View {
     }
 }
 
-#if DEBUG
-#Preview {
-    HomeView(store: StoreOf<HomeReducer>(state: MockRoutineData.home, reducer: HomeReducer()))
+private struct DetailRoute: Hashable {
+    let id: String
+    var preview: RoutineDetailReducer.State? = nil
+
+    static func == (lhs: Self, rhs: Self) -> Bool { lhs.id == rhs.id }
+    func hash(into hasher: inout Hasher) { hasher.combine(id) }
 }
+
+#if DEBUG
+    #Preview {
+        HomeView(store: StoreOf<HomeReducer>(state: MockRoutineData.home, reducer: HomeReducer()))
+    }
 #endif

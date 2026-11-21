@@ -46,6 +46,37 @@ final class RootFlowTests: XCTestCase {
     }
 
     @MainActor
+    func test_프로필_편집을_누르면_준비_중_안내가_보인다() {
+        let app = XCUIApplication()
+        app.launchArguments = AppLaunchConfiguration.launchArguments(for: .mock(.default))
+        app.launch()
+        let edit = app.buttons[AccessibilityID.MyProfile.editButton]
+        app.buttons[AccessibilityID.TopBar.trailingButton].tap()
+        XCTAssertTrue(edit.waitForExistence(timeout: 5))
+        edit.tap()
+        XCTAssertTrue(app.staticTexts["프로필 편집 화면은 준비 중입니다."].waitForExistence(timeout: 5))
+        XCTAssertFalse(app.textFields[AccessibilityID.MyProfile.editNickname].exists)
+    }
+
+    @MainActor
+    func test_프로필에서_루틴_상세를_열고_뒤로_가면_프로필로_돌아온다() {
+        let app = XCUIApplication()
+        app.launchArguments = AppLaunchConfiguration.launchArguments(for: .mock(.default))
+        app.launch()
+        let screen = RootScreen(app: app)
+        XCTAssertTrue(screen.homeScreen.waitForExistence(timeout: 10))
+        screen.homeScreen.swipeLeft()
+        let row = app.buttons["myProfile.routine.0"]
+        XCTAssertTrue(row.waitForExistence(timeout: 5))
+        row.tap()
+        XCTAssertTrue(app.buttons[AccessibilityID.RoutineDetail.allCommentsButton].waitForExistence(timeout: 5))
+        app.buttons[AccessibilityID.TopBar.leadingButton].tap()
+        XCTAssertTrue(row.waitForExistence(timeout: 5))
+        app.buttons[AccessibilityID.TopBar.leadingButton].tap()
+        XCTAssertTrue(app.buttons[AccessibilityID.Home.createButton].waitForExistence(timeout: 5))
+    }
+
+    @MainActor
     func test_홈을_오른쪽으로_밀면_루틴_만들기가_열린다() {
         let app = XCUIApplication()
         app.launchArguments = AppLaunchConfiguration.launchArguments(for: .mock(.default))

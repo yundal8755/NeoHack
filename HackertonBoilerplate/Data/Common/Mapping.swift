@@ -3,7 +3,7 @@ import Foundation
 nonisolated enum DataContractError: Error, Equatable {
     case missingField(String)
     case invalidValue(String)
-    case missingDeviceToken
+    case missingAccessToken
 }
 
 nonisolated enum Mapping {
@@ -39,16 +39,11 @@ nonisolated enum Mapping {
         }
         return value
     }
-    static func deviceHeaders(_ token: () throws -> String, userID: String? = nil) throws -> [String: String] {
+    static func bearerHeaders(_ token: () throws -> String) throws -> [String: String] {
         let value = try token()
-        guard !value.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
-            value.count <= 255,
-            !value.contains(where: { $0.isNewline || $0.asciiValue.map { $0 < 32 || $0 == 127 } == true })
-        else {
-            throw DataContractError.missingDeviceToken
+        guard value.range(of: #"^[A-Za-z0-9._~+/-]+=*\z"#, options: .regularExpression) != nil else {
+            throw DataContractError.missingAccessToken
         }
-        var headers = ["X-Device-Token": value]
-        if let userID { headers["X-User-Id"] = try pathID(userID) }
-        return headers
+        return ["Authorization": "Bearer \(value)"]
     }
 }

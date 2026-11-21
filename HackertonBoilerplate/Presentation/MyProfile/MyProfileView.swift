@@ -4,14 +4,35 @@ import MVICore
 import SwiftUI
 
 struct MyProfileView: View {
-    @ObservedObject private var store: StoreOf<MyProfileReducer>
+    @StateObject private var store: StoreOf<MyProfileReducer>
+    @StateObject private var mine: StoreOf<HomeReducer>
+    private let session: ProfileSession?
+    private let onSwitchAccount: () -> Void
     private let onBack: () -> Void
-    @State private var navigationPath: [Int] = []
+    @State private var navigationPath: [String] = []
     @State private var feedbackID = UUID()
 
-    init(store: StoreOf<MyProfileReducer>, onBack: @escaping () -> Void) {
-        self.store = store
+    init(state: MyProfileReducer.State, onBack: @escaping () -> Void) {
+        _store = StateObject(wrappedValue: StoreOf<MyProfileReducer>(state: state, reducer: MyProfileReducer()))
+        _mine = StateObject(wrappedValue: StoreOf<HomeReducer>(state: .init(), reducer: HomeReducer()))
         self.onBack = onBack
+        session = nil
+        onSwitchAccount = {}
+    }
+
+    init(session: ProfileSession, onBack: @escaping () -> Void, onSwitchAccount: @escaping () -> Void) {
+        _store = StateObject(wrappedValue: StoreOf<MyProfileReducer>(
+            state: .init(nickname: session.profile.nickname, introduction: session.profile.bio ?? ""),
+            reducer: MyProfileReducer(users: session.repositories.users, images: session.repositories.images)))
+        _mine = StateObject(wrappedValue: StoreOf<HomeReducer>(
+            state: .init(), reducer: HomeReducer(repository: session.repositories.routines, authorID: session.profile.id)))
+        self.session = session
+        self.onBack = onBack
+        self.onSwitchAccount = onSwitchAccount
+    }
+
+    private var visibleRoutines: [HomeReducer.Routine] {
+        session == nil ? store.state.visibleRoutines : mine.state.routines
     }
 
     var body: some View {
@@ -22,25 +43,36 @@ struct MyProfileView: View {
                     VStack(alignment: .leading, spacing: 0) {
                         profileHeader
                         HStack(spacing: AppSpacing.sm) {
-                            tab("내 루틴 (\(store.state.myRoutines.count))", selection: .mine, id: AccessibilityID.MyProfile.myRoutinesTab)
-                            tab("참여 루틴 (\(store.state.participatingRoutines.count))", selection: .participating, id: AccessibilityID.MyProfile.participatingTab)
+                            tab(session == nil ? "내 루틴 (\(store.state.myRoutines.count))" : "내 루틴",
+                                selection: .mine, id: AccessibilityID.MyProfile.myRoutinesTab)
+                            if session == nil {
+                                tab("참여 루틴 (\(store.state.participatingRoutines.count))",
+                                    selection: .participating, id: AccessibilityID.MyProfile.participatingTab)
+                            }
                         }
                         .padding(.vertical, AppSpacing.xs)
 
                         LazyVStack(spacing: 0) {
-                            if store.state.visibleRoutines.isEmpty {
+                            if mine.state.isLoading && visibleRoutines.isEmpty {
+                                ProgressView().padding()
+                            } else if let message = mine.state.error {
+                                ErrorView(title: "내 루틴을 불러오지 못했어요", message: message, retryTitle: "다시 시도") {
+                                    mine.send(.refresh)
+                                }
+                            } else if visibleRoutines.isEmpty {
                                 EmptyView(
                                     title: store.state.selectedTab == .mine ? "작성한 루틴이 없어요" : "참여한 루틴이 없어요",
                                     message: "홈에서 새로운 루틴을 만나보세요."
                                 )
                                 .padding(.vertical, AppSpacing.md)
                             }
-                            ForEach(store.state.visibleRoutines) { routine in
+                            ForEach(visibleRoutines) { routine in
                                 Button { navigationPath.append(routine.id) } label: {
                                     RoutineListRow(routine: routine, showsParticipation: store.state.selectedTab == .participating)
                                 }
                                 .buttonStyle(.plain)
                                 .accessibilityIdentifier("myProfile.routine.\(routine.id)")
+                                .onAppear { mine.send(.nextPage(routine.id)) }
                             }
                         }
                     }
@@ -48,14 +80,30 @@ struct MyProfileView: View {
                 }
             }
             .background(AppColor.background)
+            .accessibilityElement(children: .contain)
+            .accessibilityIdentifier(AccessibilityID.MyProfile.screen)
             .toolbar(.hidden, for: .navigationBar)
-            .navigationDestination(for: Int.self) { id in
-                if let routine = (store.state.myRoutines + store.state.participatingRoutines).first(where: { $0.id == id }) {
+            .navigationDestination(for: String.self) { id in
+                if let session {
+                    RoutineDetailDestination(id: id, session: session) { mine.send(.removed(id)) }
+                } else if let routine = visibleRoutines.first(where: { $0.id == id }) {
                     RoutineDetailDestination(state: routine.detail)
                 }
             }
         }
-        .accessibilityIdentifier(AccessibilityID.MyProfile.screen)
+        .task { mine.send(.appeared) }
+        .sheet(isPresented: Binding(
+            get: { store.state.edit != nil },
+            set: { if !$0 { store.send(.closeEditor) } }
+        )) {
+            ProfileEditView(store: store, imageURL: session?.profileImageURL)
+        }
+        .onChange(of: store.state.updatedProfile) { _, profile in
+            if let profile, session?.profile.id == profile.id {
+                session?.profile = profile
+                mine.send(.refresh)
+            }
+        }
         .feedbackPopup(Binding(
             get: { store.state.notice.map { FeedbackMessage(id: feedbackID, kind: .info, title: "안내", message: $0) } },
             set: { if $0 == nil { store.send(.noticeDismissed) } }
@@ -64,10 +112,14 @@ struct MyProfileView: View {
 
     private var profileHeader: some View {
         HStack(spacing: 20) {
-            Image("MyProfileAvatar")
-                .resizable()
-                .frame(width: 93, height: 93)
-                .accessibilityHidden(true)
+            if let url = session?.profileImageURL {
+                ProfileAvatar(url: url, size: 93)
+            } else {
+                Image("MyProfileAvatar")
+                    .resizable()
+                    .frame(width: 93, height: 93)
+                    .accessibilityHidden(true)
+            }
             VStack(alignment: .leading, spacing: AppSpacing.xs) {
                 VStack(alignment: .leading, spacing: AppSpacing.xxxs) {
                     Text(store.state.nickname)
@@ -90,6 +142,9 @@ struct MyProfileView: View {
                 }
                 .buttonStyle(.plain)
                 .accessibilityIdentifier(AccessibilityID.MyProfile.editButton)
+                if session != nil {
+                    Button("계정 전환", action: onSwitchAccount)
+                }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
         }
@@ -113,6 +168,8 @@ struct MyProfileView: View {
     }
 }
 
+#if DEBUG
 #Preview("마이프로필") {
-    MyProfileView(store: StoreOf<MyProfileReducer>(state: MockRoutineData.profile, reducer: MyProfileReducer()), onBack: {})
+    MyProfileView(state: MockRoutineData.profile, onBack: {})
 }
+#endif

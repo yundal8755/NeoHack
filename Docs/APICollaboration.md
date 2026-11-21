@@ -13,15 +13,15 @@
 
 | 도메인 | API | Repository 메서드 |
 | --- | --- | --- |
-| User | GET·POST /api/users, GET /api/users/me | list, create(nickname:bio:), me |
+| User | GET·POST /api/users, GET·PATCH /api/users/me | list, create(nickname:bio:), me, updateProfile |
 | Routine | GET·POST /api/routines, GET·PUT·DELETE /api/routines/{routineId} | list(query:), detail(id:), create(input:), update(id:input:), delete(id:) |
 | Routine 상호작용 | GET /interactions, PUT·DELETE /like, PUT·DELETE /participation, PUT /participation/completion (루틴 ID 뒤 경로) | interactions(id:change:) |
 | RoutineComment | GET·POST /api/routines/{routineId}/comments, PATCH·DELETE /api/routines/{routineId}/comments/{commentId} | list, create, update, delete |
-| Image | POST /api/images, GET /api/images/{imageId} | upload(input:), data(id:) |
+| Image | POST /api/images, POST /api/images/profile, GET /api/images/{imageId} | upload(input:), uploadProfile(input:), data(id:) |
 
 Data·Domain은 앱 소스에 도메인별로 배치한다. 요청 DTO는 Request, 응답 DTO는 Response 폴더에 둔다. 본문이 없는 조회·삭제에는 빈 DTO를 만들지 않는다. 루틴 생성·수정, 댓글 생성·수정은 같은 요청 DTO를 공유한다. ImageUploadRequestDTO는 JSON이 아닌 multipart의 file 파트다.
 
-앱은 계정을 선택한 뒤 홈·상세·작성·마이프로필을 실제 서버에 연결한다. 사용자 생성 Repository는 유지하며 앱 초기 진입은 기존 사용자 선택으로 구성한다. 프로필 편집과 프로필 이미지 변경 API는 별도 범위다.
+앱은 계정을 선택한 뒤 홈·상세·작성·마이프로필을 실제 서버에 연결한다. 사용자 생성 Repository는 유지하며 앱 초기 진입은 기존 사용자 선택으로 구성한다. 마이프로필 편집에서 닉네임·소개·프로필 사진을 변경할 수 있다.
 
 ## 인증과 데이터 계약
 
@@ -51,3 +51,6 @@ URLProtocol 대체 응답은 요청 형식, 선택 계정 헤더, multipart, 매
 - 생성 요청 Create에도 선택 bio가 추가됐다. UserCreateRequestDTO와 Repository.create(nickname:bio:)로 전달하며 nil이면 JSON 키를 생략한다. 기존 create(nickname:) 호출도 유지한다.
 - bio는 최대 100자이며 줄바꿈(CR·LF·VT·FF·NEL·LS·PS)을 허용하지 않는다. Endpoint에서 검증한다.
 - 다른 도메인의 미해결 명세 변경이 있어 전체 OpenAPI 기준 파일은 이번 사용자 프로필 변경만으로 갱신하지 않는다.
+
+
+프로필 수정은 변경한 필드만 보낸다. 한 줄 소개를 비우면 `bio: null`로 보내 삭제하고, 소개를 그대로 두면 키를 생략한다. 수정 닉네임은 2~10자, 소개는 줄바꿈 없이 최대 50자다. 프로필 사진은 `POST /api/images/profile`에 최대 5MB의 multipart `file`을 전송하고 응답의 `imageId`를 수정 요청의 `profileImagePublicId`로 사용한다.

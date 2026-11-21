@@ -9,10 +9,7 @@ struct RoutineListRow: View {
         HStack(alignment: .top, spacing: AppSpacing.sm) {
             VStack(alignment: .leading, spacing: 0) {
                 HStack(alignment: .center, spacing: AppSpacing.xs) {
-                    Image("RoutineDetailAvatar")
-                        .resizable()
-                        .frame(width: 35, height: 35)
-                        .accessibilityHidden(true)
+                    ProfileAvatar(url: routine.avatarURL, size: 35)
                     HStack(alignment: .firstTextBaseline, spacing: AppSpacing.xs) {
                         authorName(routine.nickname)
                             .lineLimit(1)
@@ -54,7 +51,7 @@ struct RoutineListRow: View {
             .frame(maxWidth: .infinity, alignment: .leading)
 
             Group {
-                if let url = routine.detail.steps.first?.imageURL {
+                if let url = routine.thumbnailURL ?? routine.detail.steps.first?.imageURL {
                     NetworkImageView(
                         url: url, cornerRadius: AppRadius.button,
                         downsamplingSize: CGSize(width: 115, height: 115),
@@ -74,8 +71,8 @@ struct RoutineListRow: View {
         Text(name).appFont(AppFont.body2).foregroundStyle(AppColor.grayBlack)
     }
 
-    private func createdDate(_ date: Date) -> some View {
-        Text(Self.dateFormatter.string(from: date))
+    private func createdDate(_ date: Date?) -> some View {
+        Text(date.map(Self.dateFormatter.string(from:)) ?? "")
             .appFont(AppFont.caption2)
             .foregroundStyle(AppColor.gray500)
     }
@@ -91,7 +88,11 @@ struct RoutineListRow: View {
     private func routineCounts(_ routine: HomeReducer.Routine) -> some View {
         HStack(spacing: AppSpacing.buttonPadding) {
             count(routine.detail.isLiked ? "HomeHeartFilled" : "Heart", value: routine.detail.likeCount)
-            count("ChatCircle", value: routine.detail.commentCount)
+            if let count = routine.participantCount {
+                self.count("User", value: count)
+            } else if !routine.isServerRow {
+                count("ChatCircle", value: routine.detail.commentCount)
+            }
         }
     }
 

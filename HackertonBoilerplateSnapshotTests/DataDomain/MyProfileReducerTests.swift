@@ -1,5 +1,4 @@
-import HackertonCore
-import HackertonMocks
+@testable import HackertonBoilerplate
 import Testing
 
 struct MyProfileReducerTests {

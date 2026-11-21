@@ -151,6 +151,87 @@ struct DataDomainTests {
         #expect(uploads == 2)
     }
 
+    @Test func profilePatchDistinguishesOmissionNullAndValue() throws {
+        for (update, expectedBio) in [
+            (UserProfileUpdate(nickname: "새 이름"), nil),
+            (UserProfileUpdate(bio: .clear), NSNull()),
+            (UserProfileUpdate(bio: .set("한 줄 소개")), "한 줄 소개" as NSObject)
+        ] {
+            let data = try JSONEncoder().encode(UserProfileUpdateRequestDTO(update: update))
+            let json = try #require(JSONSerialization.jsonObject(with: data) as? [String: NSObject])
+            #expect(json["bio"] == expectedBio)
+            #expect(json["nickname"] as? String == update.nickname)
+        }
+        #expect(throws: UserProfileUpdate.ValidationError.nickname) {
+            try UserEndpoint.updateProfile(.init(nickname: "한"), headers: [:])
+        }
+        #expect(throws: UserProfileUpdate.ValidationError.bio) {
+            try UserEndpoint.updateProfile(.init(bio: .set(String(repeating: "가", count: 51))), headers: [:])
+        }
+    }
+
+    @Test func profileEditRetriesPatchWithoutUploadingAgain() async throws {
+        var uploads = 0
+        var patches = 0
+        let manager = network { request in
+            #expect(request.value(forHTTPHeaderField: "X-Device-Token") == token)
+            #expect(request.value(forHTTPHeaderField: "X-User-Id") == id)
+            let path = request.url?.path
+            var bytes = request.httpBody ?? Data()
+            if let stream = request.httpBodyStream {
+                stream.open()
+                defer { stream.close() }
+                var buffer = [UInt8](repeating: 0, count: 1024)
+                while stream.hasBytesAvailable {
+                    let count = stream.read(&buffer, maxLength: buffer.count)
+                    if count <= 0 { break }
+                    bytes.append(contentsOf: buffer.prefix(count))
+                }
+            }
+            if path == "/api/images/profile" {
+                uploads += 1
+                #expect(request.httpMethod == "POST")
+                #expect(request.value(forHTTPHeaderField: "Content-Type")?.contains("multipart/form-data") == true)
+                #expect(String(decoding: bytes, as: UTF8.self).contains(#"name="file""#))
+                return (201, Data("""
+                    {"isSuccess":true,"result":{"imageId":"\(id)"}}
+                    """.utf8))
+            }
+            patches += 1
+            #expect(path == "/api/users/me")
+            #expect(request.httpMethod == "PATCH")
+            let body = try #require(JSONSerialization.jsonObject(with: bytes) as? [String: Any])
+            #expect(body["bio"] is NSNull)
+            #expect(body["nickname"] as? String == "새 이름")
+            #expect(body["profileImagePublicId"] as? String == id)
+            if patches == 1 {
+                return (500, Data(#"{"isSuccess":false,"code":"TEST500","message":"다시 시도"}"#.utf8))
+            }
+            return (200, Data("""
+                {"isSuccess":true,"result":{"publicId":"\(id)","nickname":"새 이름","profileImagePublicId":"\(id)","bio":null}}
+                """.utf8))
+        }
+        let reducer = MyProfileReducer(
+            users: UserRepositoryImpl(networkManager: manager, deviceToken: { token }, userID: id),
+            images: ImageRepositoryImpl(networkManager: manager, deviceToken: { token }, userID: id))
+        let store = StoreOf<MyProfileReducer>(state: .init(nickname: "이전 이름", introduction: "이전 소개"), reducer: reducer)
+        store.send(.editTapped)
+        store.send(.nicknameChanged("새 이름"))
+        store.send(.bioChanged("  "))
+        store.send(.photoChanged(.init(data: Data("photo".utf8), fileName: "profile.jpg", mimeType: "image/jpeg")))
+        store.send(.saveTapped)
+        try await waitUntil { store.state.editError != nil }
+        #expect(store.state.introduction == "이전 소개")
+        #expect(store.state.edit?.uploadedImageID == id)
+        store.send(.saveTapped)
+        try await waitUntil { store.state.updatedProfile != nil }
+        #expect(store.state.edit == nil)
+        #expect(store.state.introduction.isEmpty)
+        #expect(store.state.updatedProfile?.profileImageID == id)
+        #expect(uploads == 1)
+        #expect(patches == 2)
+    }
+
     private func waitUntil(_ condition: @MainActor () -> Bool) async throws {
         for _ in 0..<100 {
             if condition() { return }

@@ -4,10 +4,10 @@ import SwiftUI
 
 struct HomeView: View {
     @ObservedObject private var store: StoreOf<HomeReducer>
-    private let onRefresh: () async -> Void
-    @StateObject private var profileStore = StoreOf<MyProfileReducer>(state: MockRoutineData.profile, reducer: MyProfileReducer())
+    private let session: ProfileSession?
+    private let onSwitchAccount: () -> Void
     @State private var isPickingRoutineImages = false
-    @State private var navigationPath: [Int] = []
+    @State private var navigationPath: [String] = []
     @State private var isHomeDragging = false
     @State private var isSortExpanded = false
     @State private var isProfilePresented = false
@@ -44,25 +44,37 @@ struct HomeView: View {
                 isPickingRoutineImages = true
             }
             .toolbar(.hidden, for: .navigationBar)
-            .navigationDestination(for: Int.self) { id in
-                if let routine = store.state.routines.first(where: { $0.id == id }) {
+            .navigationDestination(for: String.self) { id in
+                if let session {
+                    RoutineDetailDestination(id: id, session: session) { store.send(.removed(id)) }
+                } else if let routine = store.state.routines.first(where: { $0.id == id }) {
                     RoutineDetailDestination(state: routine.detail)
                 }
             }
         }
         .onChange(of: isProfilePresented) { _, presented in
             if presented { navigationPath.removeAll() }
+            else { store.send(.refresh) }
         }
         .task { store.send(.appeared) }
         .routineCreateFlow(isPickingImages: $isPickingRoutineImages, repositories: session?.repositories) { id in
             store.send(.refresh)
-            path.append(id)
+            navigationPath.append(id)
         }
         .accessibilityIdentifier(AccessibilityID.Root.homeScreen)
     }
 
+    @ViewBuilder
     private var profileView: some View {
-        MyProfileView(store: profileStore) { isProfilePresented = false }
+        if let session {
+            MyProfileView(session: session, onBack: { isProfilePresented = false }, onSwitchAccount: onSwitchAccount)
+        } else {
+            #if DEBUG
+            MyProfileView(state: MockRoutineData.profile) { isProfilePresented = false }
+            #else
+            EmptyView(title: "계정을 선택해 주세요", message: "")
+            #endif
+        }
     }
 
     private var sortPicker: some View {
@@ -131,11 +143,15 @@ struct HomeView: View {
     private var routineList: some View {
         ScrollView {
             LazyVStack(spacing: 0) {
-                if store.state.routines.isEmpty {
+                if store.state.isLoading && store.state.routines.isEmpty {
+                    ProgressView().padding(.top, AppSpacing.lg)
+                } else if let message = store.state.error, store.state.routines.isEmpty {
+                    listError(message)
+                } else if store.state.routines.isEmpty {
                     EmptyView(title: "아직 루틴이 없어요", message: "+ 버튼을 눌러 나만의 루틴을 만들어보세요.")
                         .padding(.top, AppSpacing.lg)
                 }
-                ForEach(store.state.sortedRoutines) { routine in
+                ForEach(store.state.routines) { routine in
                     Button {
                         guard !isHomeDragging, !isProfilePresented, !isPickingRoutineImages else { return }
                         navigationPath.append(routine.id)
@@ -144,16 +160,30 @@ struct HomeView: View {
                     }
                     .buttonStyle(.plain)
                     .accessibilityIdentifier(AccessibilityID.Home.routine(routine.id))
+                    .onAppear { store.send(.nextPage(routine.id)) }
+                }
+                if !store.state.routines.isEmpty {
+                    if store.state.isLoading { ProgressView().padding() }
+                    if let message = store.state.error { listError(message) }
                 }
             }
             .padding(.horizontal, AppSpacing.md)
             .padding(.bottom, 88)
         }
-        .refreshable { await onRefresh() }
+        .refreshable {
+            store.send(.refresh)
+            while store.state.isLoading && !Task.isCancelled {
+                try? await Task.sleep(for: .milliseconds(50))
+            }
+        }
         .scrollBounceBehavior(.always)
     }
 
-
+    private func listError(_ message: String) -> some View {
+        ErrorView(title: "루틴 목록을 불러오지 못했어요", message: message, retryTitle: "다시 시도") {
+            store.send(.refresh)
+        }
+    }
 }
 
 #if DEBUG

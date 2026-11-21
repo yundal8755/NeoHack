@@ -1,5 +1,6 @@
 import HackertonCore
 import MVICore
+import Observation
 import SwiftUI
 
 struct RootView: View {
@@ -66,10 +67,16 @@ struct RootView: View {
 
 }
 
-struct ProfileSession: Identifiable {
+@Observable
+final class ProfileSession: Identifiable {
     let id = UUID()
-    let profile: UserEntity
+    var profile: UserEntity
     let repositories: AppContainer.ProfileRepositories
+
+    init(profile: UserEntity, repositories: AppContainer.ProfileRepositories) {
+        self.profile = profile
+        self.repositories = repositories
+    }
 
     var profileImageURL: URL? {
         guard let imageID = profile.profileImageID else { return nil }

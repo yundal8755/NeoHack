@@ -1,105 +1,72 @@
-# Clean Architecture Guide
+# Architecture Guide
 
-This project follows Clean Architecture boundaries while keeping SwiftUI feature work practical. The folder name `Domain` means app business domain, and `Data/<Feature>` contains the backend API domain that owns endpoint routing and DTO mapping.
+SwiftUI 화면은 공통 MVI를 사용하고, API 응답은 DTO → Mapper → Entity로 변환해 화면에 전달한다. 서비스별 API와 모델은 실제 기능을 구현할 때 추가하며, 기능이 없는 상태에서는 빈 폴더나 예제 구현을 만들지 않는다.
 
-## Required Layer Boundaries
+Data layer와 Entity 구성은 서버 연결 담당이 맡고, UI 담당은 전달받은 Entity를 화면에 연결한다. 구체적인 역할은 [역할과 작업 흐름](IOSDeveloperHandoff.md)을 따른다.
 
-```text
-Presentation -> Data -> Core/Network
-```
-
-- `Presentation` can import SwiftUI and render state. It can call use cases, stores, or view models, but it must not build URLs or decode API DTOs.
-- `Domain` contains pure Swift entities, use cases, and repository protocols. It must not import SwiftUI, Alamofire, or network routers.
-- `Data` contains Feature-specific endpoints, DTOs, mappers, and repository implementations. It can depend on `Core/Network` and `Domain`.
-- `Core/Network` contains HTTP infrastructure. It should not know about domain entities or SwiftUI state.
-- `App` is the composition root and may wire concrete implementations across layers.
-
-## API Domain Endpoint Convention
-
-Backend API domains determine endpoint placement:
+## 데이터 흐름
 
 ```text
-API domain: Auth      -> Data/Auth/AuthEndpoint.swift
-API domain: Server    -> Core/Network/Server/ServerAPI.swift
-API domain: User      -> Data/User/UserEndpoint.swift
-API domain: Orders    -> Data/Orders/OrdersEndpoint.swift
+요청: View → Action → Reducer의 Effect → Repository → Endpoint / NetworkManager → 서버
+응답: 서버 JSON → DTO → Mapper → Entity → Action → Reducer의 State → View
 ```
 
-Endpoint rules:
+- View는 State를 표시하고 사용자 입력을 Action으로 전달한다.
+- Reducer는 상태를 변경하며, API 호출 같은 비동기 작업은 Effect에서 실행한다.
+- Repository는 Endpoint로 요청하고 응답 DTO를 Mapper에 전달해 Entity를 반환한다.
+- Mapper는 네트워크 호출이나 화면 상태 변경 없이 데이터만 변환한다.
+- View와 Reducer는 DTO를 직접 해석하거나 URL을 조립하지 않는다.
 
-- One `Data` folder per API domain.
-- Endpoint cases match endpoint intent, not screen names.
-- Endpoints conform to `TargetType`.
-- Endpoints own method, path, query parameters, body, headers, and auth requirement.
-- Endpoints do not decode responses, map DTOs, own tokens, or update UI state.
-- Provider-specific endpoint names are not allowed in shared roots. Use product domain names from the API contract instead.
+## 기능을 추가할 때의 폴더 구조
 
-## Data Layer Convention
-
-Use this structure when an API domain starts feeding product behavior in the MVP layer:
+아래 경로의 `<Feature>`는 새 서비스의 실제 기능 이름으로 바꾼다.
 
 ```text
-Data/<Domain>/<Domain>DTO.swift
-Data/<Domain>/<Domain>Endpoint.swift
-Data/<Domain>/<Domain>Mapper.swift
-Data/<Domain>/<Domain>Repository.swift
+App/
+  AppContainer.swift
+Core/
+  MVICore/
+  Network/
+  Components/
+Data/<Feature>/
+  <Feature>Endpoint.swift
+  <Feature>DTO.swift
+  <Feature>Mapper.swift
+  <Feature>Repository.swift
+Entity/<Feature>/
+  <Feature>.swift
+Presentation/<Feature>/
+  <Feature>View.swift
+  <Feature>Reducer.swift
 ```
 
-- DTOs mirror API payloads and can use server field naming via `CodingKeys`.
-- Repositories call `NetworkManager` with the matching `Data/<Feature>` endpoint.
-- Mappers convert DTOs into feature/domain-friendly models.
-- Introduce `Domain` repository protocols only when the feature needs a stable business boundary.
+## 각 구성의 책임
 
-## Domain Layer Convention
+| 구성 | 책임 |
+| --- | --- |
+| Endpoint | `TargetType`을 구현해 HTTP 메서드, 경로, 파라미터, 본문, 헤더, 인증 필요 여부를 정의한다. |
+| NetworkManager | 공통 요청 실행, JSON 디코딩, 네트워크 오류와 인증 처리를 담당한다. |
+| DTO | 서버 요청·응답 형식을 표현한다. 응답 DTO는 `Decodable`, 요청 DTO는 `Encodable`을 사용한다. |
+| Mapper | DTO의 필드명, 타입, 날짜, 선택값 등을 앱에서 사용할 Entity로 변환한다. |
+| Entity | 서버 응답 형식과 분리된 앱 모델이다. SwiftUI, Alamofire, DTO에 의존하지 않는다. |
+| Repository | API 호출과 성공·실패 판단, DTO → Entity 변환을 조합한다. 화면에는 Entity 또는 Entity 목록·페이지를 반환한다. |
+| Reducer | State와 Action을 내부에 정의하고, Repository 결과를 State에 반영한다. |
+| AppContainer | NetworkManager와 저장소, 실제 기능의 Repository를 생성해 주입한다. |
 
-Use this structure for app-facing business behavior:
+`Data`는 `Core/Network`와 `Entity`를 사용한다. `Presentation`은 Repository와 Entity를 사용하고, `Core/Network`는 서비스별 DTO나 Entity를 참조하지 않는다.
 
-```text
-Domain/<Domain>/Entities/
-Domain/<Domain>/Repositories/
-Domain/<Domain>/UseCases/
-```
+## API 계약과 변환 규칙
 
-- Entities are stable app models, not raw response DTOs.
-- Repository protocols describe what the app needs, not every endpoint the server exposes.
-- Use cases represent user/business actions and coordinate repository calls.
-- Do not add use cases just to pass through a single field unless the feature needs the boundary for testing or reuse.
+- API 경로, 필드명, 성공 조건, 오류 형식은 새 서버의 계약에 맞춰 정의한다. 이전 서비스의 응답 포맷을 전제하지 않는다.
+- 성공 응답을 감싸는 공통 필드가 필요하면 실제 계약에 맞는 DTO를 `Data`에 추가한다.
+- 공통 응답 디코더는 snake_case를 camelCase로 변환한다. 요청 DTO는 속성명 또는 `CodingKeys`에 따라 인코딩되므로 서버 키 이름을 확인한다.
+- 필수 필드가 없거나 변환에 실패하면 오류를 전달한다. 임의의 빈 문자열이나 0으로 잘못된 응답을 숨기지 않는다.
+- 기본값과 선택값 처리는 API 계약과 화면 요구가 정해진 경우에만 Mapper에 둔다.
+- 신규 Mapper에 타입·날짜 변환이나 분기가 있다면 실제 응답 예시와 잘못된 입력을 검증하는 작은 테스트를 추가한다.
 
-## Presentation Convention
+## 공통 인증 기반
 
-Use `Presentation/<Feature>` for SwiftUI surfaces:
-
-```text
-Presentation/<Feature>/<Feature>View.swift
-Presentation/<Feature>/<Feature>ViewModel.swift
-Presentation/<Feature>/<Feature>Store.swift
-Presentation/<Feature>/<Feature>State.swift
-Presentation/<Feature>/<Feature>Intent.swift
-```
-
-- MVVM is acceptable for straightforward screens.
-- MVI is acceptable for screens with complex state transitions.
-- Views should render state and forward user actions.
-- Stores/view models should call use cases or injected repositories, not routers.
-- Navigation routes live in `App/Navigation` and should reference app concepts, not backend endpoint names.
-
-## Composition Root
-
-`App/AppContainer.swift` wires concrete dependencies:
-
-- Token storage and network infrastructure.
-- Network services and data sources.
-- Repository implementations for domain protocols.
-- Use cases consumed by features.
-
-Do not instantiate concrete routers, network managers, or repository implementations directly inside SwiftUI views.
-
-## Checklist Before Adding A Feature
-
-- The API domain is known.
-- The endpoint is under `Data/<Feature>`.
-- DTOs are under `Data/<Domain>/DTO`.
-- Domain entities are free of transport-specific names.
-- Repository protocols live in `Domain`, implementations live in `Data`.
-- The feature imports presentation/domain concepts, not provider-specific routers.
-- Any temporary mock or placeholder is named as such and does not introduce a fake product domain.
+- `TokenStoring`과 `KeychainTokenStore`는 토큰 저장·삭제를 담당한다.
+- `AuthInterceptor`는 인증이 필요한 요청에 Bearer 헤더를 붙인다.
+- 실제 로그인 API, 요청·응답 DTO, 로그인 화면은 새 서비스에서 추가한다.
+- 토큰 갱신이 필요하면 `AccessTokenRefreshing` 구현을 주입한다. 기본 AppContainer에는 갱신 API가 연결돼 있지 않다.

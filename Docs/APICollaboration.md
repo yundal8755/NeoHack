@@ -1,13 +1,10 @@
 # 서버 연결과 데이터 전달
 
-## 서버 명세
+## 서버 설정
 
-- API Base URL: https://api.example.invalid/
-- [Swagger UI](https://api.example.invalid/swagger-ui/index.html)
-- [OpenAPI JSON](https://api.example.invalid/v3/api-docs)
-- [ERD](https://erd.example.invalid/share/REDACTED_ERD)
+실제 API 서버·Swagger·ERD 주소는 프로젝트 담당자가 별도로 공유합니다. 이 작업 환경의 참조는 Git에서 제외되는 `Docs/APICollaboration.local.md`에 보관합니다.
 
-기본 서버는 Config/AppConfig.xcconfig, 개인 서버 변경은 Git에서 제외되는 Config/AppConfig.local.xcconfig에서 관리한다.
+공유 설정은 `Config/AppConfig.xcconfig`, 개발자별 서버 주소와 서명 팀은 Git에서 제외되는 `Config/AppConfig.local.xcconfig`에서 관리합니다. 새 환경에서는 `Config/AppConfig.local.example.xcconfig`를 복사해 설정합니다.
 
 ## 구현 범위 — 2026-11-22
 

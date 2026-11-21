@@ -23,3 +23,9 @@ Config/*.local.xcconfig
 
 # Swift Package Manager build output
 .build/
+
+# Private API references and signing materials
+Docs/*.local.md
+*.p12
+*.p8
+*.mobileprovision

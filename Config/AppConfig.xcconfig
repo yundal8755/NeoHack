@@ -1,5 +1,4 @@
-// Shared app build settings.
-// Override the default server in the ignored local config when needed.
-API_BASE_URL = https:/$()/api.example.invalid
+// Configure the server and signing in the ignored local file.
+API_BASE_URL =
 
 #include? "AppConfig.local.xcconfig"

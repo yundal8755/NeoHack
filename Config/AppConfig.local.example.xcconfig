@@ -1,5 +1,4 @@
-// Optional local override. Copy to AppConfig.local.xcconfig only when you need a different server.
-// AppConfig.local.xcconfig is intentionally ignored by git.
-// For HTTP URLs in xcconfig files, escape // as /$()/.
-// Example: API_BASE_URL = http:/$()/127.0.0.1:8080
+// Copy to AppConfig.local.xcconfig and enter your own values.
+// In URLs, write // as /$()/ (for example https:/$()/api.example.com).
 API_BASE_URL =
+DEVELOPMENT_TEAM =

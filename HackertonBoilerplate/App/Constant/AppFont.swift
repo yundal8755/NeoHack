@@ -1,151 +1,140 @@
 import SwiftUI
+import UIKit
 
+/// Figma `너디터리 해커톤` 파일의 텍스트 스타일과 같은 이름·값을 쓴다.
+/// 모든 스타일은 Pretendard, 행간 1.5, 자간 0이다.
+///
+/// 줄 높이까지 Figma와 맞추려면 `Text`에 `.appFont(AppFont.title1)`처럼 스타일을 적용한다.
+/// `TextField`나 버튼 라벨처럼 `Font`만 필요한 곳은 `AppFont.title1.font`를 쓴다.
 enum AppFont {
-    static let display = heading1
-    static let hero = heading1
-    static let title = heading1
-    static let title2 = heading2
-    static let headline = headline2
-    static let body = body1Regular
-    static let bodyStrong = body1Medium
-    static let callout = body2Regular
-    static let calloutStrong = body2Semibold
-    static let caption = caption2Medium
-    static let caption2 = caption3Regular
+    // MARK: - Figma 텍스트 스타일
 
-    static let heading1 = bold(22, relativeTo: .title2)
-    static let heading2 = bold(20, relativeTo: .title3)
-    static let headline1 = bold(18, relativeTo: .headline)
-    static let headline2 = bold(17, relativeTo: .headline)
-    static let price1Bold = bold(16, relativeTo: .body)
-    static let price2Bold = bold(14, relativeTo: .subheadline)
-    static let body1Semibold = semiBold(16, relativeTo: .body)
-    static let body1Medium = medium(16, relativeTo: .body)
-    static let body1Regular = regular(16, relativeTo: .body)
-    static let body2Semibold = semiBold(15, relativeTo: .callout)
-    static let body2Medium = medium(15, relativeTo: .callout)
-    static let body2Regular = regular(15, relativeTo: .callout)
-    static let body3Semibold = semiBold(14, relativeTo: .subheadline)
-    static let body3Medium = medium(14, relativeTo: .subheadline)
-    static let body3Regular = regular(14, relativeTo: .subheadline)
-    static let caption1Semibold = semiBold(13, relativeTo: .caption)
-    static let caption1Medium = medium(13, relativeTo: .caption)
-    static let caption1Regular = regular(13, relativeTo: .caption)
-    static let caption2Semibold = semiBold(12, relativeTo: .caption2)
-    static let caption2Medium = medium(12, relativeTo: .caption2)
-    static let caption2Regular = regular(12, relativeTo: .caption2)
-    static let caption3Semibold = semiBold(10, relativeTo: .caption2)
-    static let caption3Medium = medium(10, relativeTo: .caption2)
-    static let caption3Regular = regular(10, relativeTo: .caption2)
+    /// Title/Title1: SemiBold 22
+    static let title1 = AppTextStyle(.semiBold, size: 22, relativeTo: .title2)
+    /// Body/Body1: SemiBold 18
+    static let body1 = AppTextStyle(.semiBold, size: 18, relativeTo: .headline)
+    /// Body/Body2: SemiBold 16
+    static let body2 = AppTextStyle(.semiBold, size: 16, relativeTo: .body)
+    /// Caption/Caption1: Regular 14
+    static let caption1 = AppTextStyle(.regular, size: 14, relativeTo: .subheadline)
+    /// Caption/Caption2: Regular 12
+    static let caption2 = AppTextStyle(.regular, size: 12, relativeTo: .caption)
 
-    static let heading1Style = textStyle(.bold, size: 22, relativeTo: .title2)
-    static let heading2Style = textStyle(.bold, size: 20, relativeTo: .title3)
-    static let headline1Style = textStyle(.bold, size: 18, relativeTo: .headline)
-    static let headline2Style = textStyle(.bold, size: 17, relativeTo: .headline)
-    static let price1BoldStyle = textStyle(.bold, size: 16, relativeTo: .body)
-    static let price2BoldStyle = textStyle(.bold, size: 14, relativeTo: .subheadline)
-    static let body1SemiboldStyle = textStyle(.semiBold, size: 16, relativeTo: .body)
-    static let body1MediumStyle = textStyle(.medium, size: 16, relativeTo: .body)
-    static let body1RegularStyle = textStyle(.regular, size: 16, relativeTo: .body)
-    static let body2SemiboldStyle = textStyle(.semiBold, size: 15, relativeTo: .callout)
-    static let body2MediumStyle = textStyle(.medium, size: 15, relativeTo: .callout)
-    static let body2RegularStyle = textStyle(.regular, size: 15, relativeTo: .callout)
-    static let body3SemiboldStyle = textStyle(.semiBold, size: 14, relativeTo: .subheadline)
-    static let body3MediumStyle = textStyle(.medium, size: 14, relativeTo: .subheadline)
-    static let body3RegularStyle = textStyle(.regular, size: 14, relativeTo: .subheadline)
-    static let caption1SemiboldStyle = textStyle(.semiBold, size: 13, relativeTo: .caption)
-    static let caption1MediumStyle = textStyle(.medium, size: 13, relativeTo: .caption)
-    static let caption1RegularStyle = textStyle(.regular, size: 13, relativeTo: .caption)
-    static let caption2SemiboldStyle = textStyle(.semiBold, size: 12, relativeTo: .caption2)
-    static let caption2MediumStyle = textStyle(.medium, size: 12, relativeTo: .caption2)
-    static let caption2RegularStyle = textStyle(.regular, size: 12, relativeTo: .caption2)
-    static let caption3SemiboldStyle = textStyle(.semiBold, size: 10, relativeTo: .caption2)
-    static let caption3MediumStyle = textStyle(.medium, size: 10, relativeTo: .caption2)
-    static let caption3RegularStyle = textStyle(.regular, size: 10, relativeTo: .caption2)
+    // MARK: - 기존 컴포넌트용 별칭
+
+    static let display = title1.font
+    static let hero = title1.font
+    static let title = title1.font
+    static let title2 = body1.font
+    static let headline = body1.font
+    static let body = regular(16, relativeTo: .body)
+    static let bodyStrong = body2.font
+    static let callout = caption1.font
+    static let calloutStrong = semiBold(14, relativeTo: .subheadline)
+    static let caption = caption2.font
+    static let caption2Font = regular(10, relativeTo: .caption2)
+
+    // MARK: - 굵기별 Font
 
     static func black(_ size: CGFloat, relativeTo textStyle: Font.TextStyle = .body) -> Font {
-        pretendard(.black, size: size, relativeTo: textStyle)
+        AppFontWeight.black.font(size: size, relativeTo: textStyle)
     }
 
     static func extraBold(_ size: CGFloat, relativeTo textStyle: Font.TextStyle = .body) -> Font {
-        pretendard(.extraBold, size: size, relativeTo: textStyle)
+        AppFontWeight.extraBold.font(size: size, relativeTo: textStyle)
     }
 
     static func bold(_ size: CGFloat, relativeTo textStyle: Font.TextStyle = .body) -> Font {
-        pretendard(.bold, size: size, relativeTo: textStyle)
+        AppFontWeight.bold.font(size: size, relativeTo: textStyle)
     }
 
     static func semiBold(_ size: CGFloat, relativeTo textStyle: Font.TextStyle = .body) -> Font {
-        pretendard(.semiBold, size: size, relativeTo: textStyle)
+        AppFontWeight.semiBold.font(size: size, relativeTo: textStyle)
     }
 
     static func medium(_ size: CGFloat, relativeTo textStyle: Font.TextStyle = .body) -> Font {
-        pretendard(.medium, size: size, relativeTo: textStyle)
+        AppFontWeight.medium.font(size: size, relativeTo: textStyle)
     }
 
     static func regular(_ size: CGFloat, relativeTo textStyle: Font.TextStyle = .body) -> Font {
-        pretendard(.regular, size: size, relativeTo: textStyle)
+        AppFontWeight.regular.font(size: size, relativeTo: textStyle)
     }
 
     static func light(_ size: CGFloat, relativeTo textStyle: Font.TextStyle = .body) -> Font {
-        pretendard(.light, size: size, relativeTo: textStyle)
+        AppFontWeight.light.font(size: size, relativeTo: textStyle)
     }
 
     static func extraLight(_ size: CGFloat, relativeTo textStyle: Font.TextStyle = .body) -> Font {
-        pretendard(.extraLight, size: size, relativeTo: textStyle)
+        AppFontWeight.extraLight.font(size: size, relativeTo: textStyle)
     }
 
     static func thin(_ size: CGFloat, relativeTo textStyle: Font.TextStyle = .body) -> Font {
-        pretendard(.thin, size: size, relativeTo: textStyle)
+        AppFontWeight.thin.font(size: size, relativeTo: textStyle)
+    }
+}
+
+/// 굵기·크기·행간·자간을 묶은 텍스트 스타일.
+/// Figma에 없는 굵기 변형이 필요하면 `AppFont.body2.weight(.medium)`처럼 만든다.
+struct AppTextStyle {
+    let weight: AppFontWeight
+    let size: CGFloat
+    let textStyle: Font.TextStyle
+    let lineHeightMultiple: CGFloat
+    let letterSpacing: CGFloat
+
+    init(
+        _ weight: AppFontWeight,
+        size: CGFloat,
+        relativeTo textStyle: Font.TextStyle = .body,
+        lineHeightMultiple: CGFloat = 1.5,
+        letterSpacing: CGFloat = 0
+    ) {
+        self.weight = weight
+        self.size = size
+        self.textStyle = textStyle
+        self.lineHeightMultiple = lineHeightMultiple
+        self.letterSpacing = letterSpacing
     }
 
-    private static func pretendard(
-        _ weight: PretendardWeight,
-        size: CGFloat,
-        relativeTo textStyle: Font.TextStyle
-    ) -> Font {
-        Font.custom(weight.fontName, size: size, relativeTo: textStyle)
+    var font: Font {
+        weight.font(size: size, relativeTo: textStyle)
     }
 
-    private static func textStyle(
-        _ weight: PretendardWeight,
-        size: CGFloat,
-        relativeTo textStyle: Font.TextStyle
-    ) -> AppTextStyle {
+    /// Figma 줄 높이(size × 행간).
+    var lineHeight: CGFloat {
+        size * lineHeightMultiple
+    }
+
+    /// Figma 줄 높이(size × 행간)와 폰트 고유 줄 높이의 차이.
+    var extraLineSpacing: CGFloat {
+        let fontLineHeight = UIFont(name: weight.fontName, size: size)?.lineHeight ?? size
+        return max(lineHeight - fontLineHeight, 0)
+    }
+
+    func weight(_ weight: AppFontWeight) -> AppTextStyle {
         AppTextStyle(
-            font: pretendard(weight, size: size, relativeTo: textStyle),
+            weight,
             size: size,
-            lineHeightMultiple: 1.3,
-            letterSpacingRatio: -0.02
+            relativeTo: textStyle,
+            lineHeightMultiple: lineHeightMultiple,
+            letterSpacing: letterSpacing
         )
     }
 }
 
-struct AppTextStyle {
-    let font: Font
-    let size: CGFloat
-    let lineHeightMultiple: CGFloat
-    let letterSpacingRatio: CGFloat
-
-    var lineSpacing: CGFloat {
-        max((size * lineHeightMultiple) - size, 0)
-    }
-
-    var letterSpacing: CGFloat {
-        size * letterSpacingRatio
-    }
-}
-
 extension View {
+    /// 폰트와 함께 Figma 줄 높이를 적용한다. 한 줄 텍스트도 위아래 여백으로 같은 높이를 갖는다.
     func appFont(_ style: AppTextStyle) -> some View {
-        self
+        let extra = style.extraLineSpacing
+        return self
             .font(style.font)
             .tracking(style.letterSpacing)
-            .lineSpacing(style.lineSpacing)
+            .lineSpacing(extra)
+            .padding(.vertical, extra / 2)
     }
 }
 
-private enum PretendardWeight {
+enum AppFontWeight {
     case black
     case extraBold
     case bold
@@ -155,6 +144,10 @@ private enum PretendardWeight {
     case light
     case extraLight
     case thin
+
+    func font(size: CGFloat, relativeTo textStyle: Font.TextStyle) -> Font {
+        Font.custom(fontName, size: size, relativeTo: textStyle)
+    }
 
     var fontName: String {
         switch self {

@@ -18,6 +18,19 @@ final class RootFlowTests: XCTestCase {
     }
 
     @MainActor
+    func test_홈을_왼쪽으로_밀면_마이프로필이_열린다() {
+        let app = XCUIApplication()
+        app.launchArguments = AppLaunchConfiguration.launchArguments(for: .mock(.default))
+        app.launch()
+        let screen = RootScreen(app: app)
+        XCTAssertTrue(screen.homeScreen.waitForExistence(timeout: 10))
+        screen.homeScreen.swipeLeft()
+        XCTAssertTrue(app.staticTexts["프로필 화면을 준비하고 있어요."].waitForExistence(timeout: 5))
+        app.buttons[AccessibilityID.TopBar.leadingButton].tap()
+        XCTAssertTrue(app.buttons[AccessibilityID.Home.createButton].waitForExistence(timeout: 5))
+    }
+
+    @MainActor
     func test_홈을_오른쪽으로_밀면_루틴_만들기가_열린다() {
         let app = XCUIApplication()
         app.launchArguments = AppLaunchConfiguration.launchArguments(for: .mock(.default))

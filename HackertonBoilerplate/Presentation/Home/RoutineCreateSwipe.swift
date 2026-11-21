@@ -4,12 +4,13 @@ extension View {
     /// 인스타그램처럼 화면을 오른쪽으로 밀면 왼쪽에서 루틴 만들기 안내가 드러나고,
     /// 충분히 밀거나 빠르게 튕기고 놓으면 화면이 끝까지 밀린 뒤 `onCommit`을 애니메이션 없이 부른다.
     /// 기준선을 넘거나 되돌아올 때 햅틱을 준다.
-    func routineCreateSwipe(onCommit: @escaping () -> Void) -> some View {
-        modifier(RoutineCreateSwipe(onCommit: onCommit))
+    func routineCreateSwipe(onProfile: (() -> Void)? = nil, onCommit: @escaping () -> Void) -> some View {
+        modifier(RoutineCreateSwipe(onProfile: onProfile, onCommit: onCommit))
     }
 }
 
 private struct RoutineCreateSwipe: ViewModifier {
+    let onProfile: (() -> Void)?
     let onCommit: () -> Void
 
     /// 드래그 중인 거리. 손을 떼면 `settleAnimation`으로 0이 된다.
@@ -37,21 +38,23 @@ private struct RoutineCreateSwipe: ViewModifier {
     /// 밀기 시작하면 모서리를 둥글게 키우고, 이 거리만큼 밀면 최대가 된다.
     private static let cornerRoundingDistance: CGFloat = 48
     private var cornerRadius: CGFloat {
-        AppRadius.slidingScreen * min(max(offset, 0) / Self.cornerRoundingDistance, 1)
+        AppRadius.slidingScreen * min(abs(offset) / Self.cornerRoundingDistance, 1)
     }
     private var commitDistance: CGFloat { width * Self.commitRatio }
-    private var isReady: Bool { width > 0 && drag.offset >= commitDistance }
+    private var isReady: Bool { width > 0 && abs(drag.offset) >= commitDistance }
 
     func body(content: Content) -> some View {
-        ZStack(alignment: .leading) {
+        ZStack(alignment: offset < 0 ? .trailing : .leading) {
             AppColor.background
                 .ignoresSafeArea()
 
             RoutineCreateSwipeHint(
-                progress: commitDistance > 0 ? min(offset / commitDistance, 1) : 0,
-                isReady: isReady || isCommitting
+                progress: commitDistance > 0 ? min(abs(offset) / commitDistance, 1) : 0,
+                isReady: isReady || isCommitting,
+                title: offset < 0 ? "마이프로필" : "루틴 만들기",
+                systemImage: offset < 0 ? "person" : "plus"
             )
-            .frame(width: max(offset, 0))
+            .frame(width: abs(offset))
             .frame(maxHeight: .infinity)
             .clipped()
             .accessibilityHidden(true)
@@ -66,7 +69,7 @@ private struct RoutineCreateSwipe: ViewModifier {
                 .background {
                     RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
                         .fill(AppColor.background)
-                        .shadow(color: AppColor.black.opacity(offset > 0 ? AppOpacity.overlay : 0), radius: 24)
+                        .shadow(color: AppColor.black.opacity(abs(offset) > 0 ? AppOpacity.overlay : 0), radius: 24)
                         .ignoresSafeArea()
                 }
                 .offset(x: offset)
@@ -88,32 +91,33 @@ private struct RoutineCreateSwipe: ViewModifier {
                     state.isHorizontal = abs(translation.width) > abs(translation.height)
                 }
                 guard state.isHorizontal == true else { return }
-                state.offset = min(max(translation.width, 0), width)
+                state.offset = min(max(translation.width, onProfile == nil ? 0 : -width), width)
             }
             .onEnded { value in
                 let translation = value.translation
                 guard abs(translation.width) > abs(translation.height), width > 0 else { return }
-                let dragged = min(max(translation.width, 0), width)
-                let isFlick = value.predictedEndTranslation.width >= width * Self.flickRatio
-                guard dragged >= commitDistance || (dragged > 0 && isFlick) else { return }
-                commit(fromReady: dragged >= commitDistance)
+                let dragged = min(max(translation.width, onProfile == nil ? 0 : -width), width)
+                let direction: CGFloat = dragged < 0 ? -1 : 1
+                let isFlick = value.predictedEndTranslation.width * direction >= width * Self.flickRatio
+                guard abs(dragged) >= commitDistance || (abs(dragged) > 0 && isFlick) else { return }
+                commit(direction: direction, fromReady: abs(dragged) >= commitDistance)
             }
     }
 
-    private func commit(fromReady: Bool) {
+    private func commit(direction: CGFloat, fromReady: Bool) {
         isCommitting = true
         // 기준선을 넘지 않고 튕겨서 연 경우에는 아직 햅틱이 없었으므로 여기서 준다.
         if !fromReady {
             HapticFeedbackManager.shared.impact(style: .medium)
         }
         withAnimation(Self.settleAnimation) {
-            settledOffset = width
+            settledOffset = width * direction
         } completion: {
             var transaction = Transaction()
             transaction.disablesAnimations = true
             // 안내 화면과 같은 배경의 전체 화면을 바로 덮은 뒤, 그 뒤에서 홈을 제자리로 돌린다.
             withTransaction(transaction) {
-                onCommit()
+                if direction < 0 { onProfile?() } else { onCommit() }
                 settledOffset = 0
                 isCommitting = false
             }
@@ -127,17 +131,19 @@ struct RoutineCreateSwipeHint: View {
     let progress: CGFloat
     /// 놓으면 열리는 상태.
     let isReady: Bool
+    var title: String = "루틴 만들기"
+    var systemImage: String = "plus"
 
     var body: some View {
         VStack(spacing: AppSpacing.xs) {
-            Image(systemName: "plus")
+            Image(systemName: systemImage)
                 .font(.system(size: 22, weight: .semibold))
                 .foregroundStyle(isReady ? AppColor.white : AppColor.grayBlack)
                 .frame(width: Self.iconSize, height: Self.iconSize)
                 .background(Circle().fill(isReady ? AppColor.primary : AppColor.surface))
                 .scaleEffect(isReady ? 1.08 : 1)
 
-            Text(verbatim: "루틴 만들기")
+            Text(verbatim: title)
                 .appFont(AppFont.caption1)
                 .foregroundStyle(isReady ? AppColor.textPrimary : AppColor.textSecondary)
                 .lineLimit(1)

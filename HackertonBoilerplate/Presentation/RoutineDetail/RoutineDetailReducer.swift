@@ -210,7 +210,7 @@ nonisolated struct RoutineDetailReducer: Reducer {
         case .deleteParticipationResult:
             guard state.isParticipationOwner, let id, let resultParticipantID, let routines else { break }
             return mutate(&state) {
-                try await routines.deleteParticipationResult(id: id, participantID: resultParticipantID)
+                try await routines.deleteParticipationResult(routineID: id, participantID: resultParticipantID)
                 return .routineRemoved
             }
         case .deleteRoutine:

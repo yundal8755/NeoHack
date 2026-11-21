@@ -33,21 +33,30 @@ struct DataDomainTests {
 
     @Test func selectedProfileAndInteractionRoutes() async throws {
         let expected = [
-            "/interactions": "GET", "/participation/completion": "PUT"
+            "/interactions": "GET", "/participation/completion": "PUT",
         ]
         let manager = network { request in
             #expect(request.value(forHTTPHeaderField: "Authorization") == "Bearer \(token)")
             #expect(request.value(forHTTPHeaderField: "X-User-Id") == nil)
             let path = request.url?.path ?? ""
             if path == "/api/users/me" {
-                return (200, Data("""
-                    {"isSuccess":true,"result":{"publicId":"\(id)","nickname":"프로필","bio":"한 줄"}}
-                    """.utf8))
+                return (
+                    200,
+                    Data(
+                        """
+                        {"isSuccess":true,"result":{"publicId":"\(id)","nickname":"프로필","bio":"한 줄"}}
+                        """.utf8)
+                )
             }
             for (suffix, method) in expected where path.hasSuffix(suffix) {
                 #expect(request.httpMethod == method)
             }
-            return (200, Data(#"{"isSuccess":true,"result":{"likeCount":1,"likedByMe":true,"inProgressCount":2,"completedCount":3,"myParticipationStatus":"COMPLETED"}}"#.utf8))
+            return (
+                200,
+                Data(
+                    #"{"isSuccess":true,"result":{"likeCount":1,"likedByMe":true,"inProgressCount":2,"completedCount":3,"myParticipationStatus":"COMPLETED"}}"#
+                        .utf8)
+            )
         }
         let user = UserRepositoryImpl(networkManager: manager, accessToken: { token })
         #expect(try await user.me().id == id)
@@ -55,13 +64,145 @@ struct DataDomainTests {
         for (change, method, suffix) in [
             (nil, "GET", "/interactions"), (RoutineInteractions.Change.like, "PUT", "/like"),
             (.unlike, "DELETE", "/like"), (.join, "PUT", "/participation"),
-            (.leave, "DELETE", "/participation"), (.complete, "PUT", "/participation/completion")
+            (.leave, "DELETE", "/participation"),
         ] {
             let request = try RoutineEndpoint.interactions(id: id, change: change, headers: [:]).asURLRequest()
             #expect(request.httpMethod == method)
             #expect(request.url?.path.hasSuffix(suffix) == true)
             #expect(try await routines.interactions(id: id, change: change).participation == .completed)
         }
+        await #expect(throws: RoutineParticipationError.completionRequiresInput) {
+            try await routines.interactions(id: id, change: .complete)
+        }
+        let completion = try RoutineParticipationEndpoint.complete(routineID: id, input: input, headers: [:])
+            .asURLRequest()
+        let body = try #require(completion.httpBody)
+        let json = try JSONSerialization.jsonObject(with: body) as? [String: Any]
+        #expect((json?["cards"] as? [[String: String]])?.first?["imageId"] == id)
+        #expect(try await routines.completeParticipation(id: id, input: input).participation == .completed)
+    }
+
+    @Test func participationDraftAndResultContract() async throws {
+        let base = "/api/routines/\(id)"
+        let draft = #"{"title":"초안","cards":[null,{"time":"09:30"}]}"#
+        let participant = #"{"userId":"user","nickname":"테스터"}"#
+        let result = """
+            {"routineId":"\(id)","participant":\(participant),"completedAt":"2026-11-22T09:30:00",
+             "work":{"title":"완료 결과","cards":[{"imageId":"\(id)","title":"완료 스텝","time":"09:30"}]}}
+            """
+        let manager = network { request in
+            let path = request.url?.path ?? ""
+            let method = request.httpMethod ?? ""
+            let authenticated = path.hasSuffix("/draft") || method != "GET"
+            #expect(request.value(forHTTPHeaderField: "Authorization") == (authenticated ? "Bearer \(token)" : nil))
+            let body: String
+            switch (method, path) {
+            case ("GET", "\(base)/participation/draft"): body = "null"
+            case ("PUT", "\(base)/participation/draft"): body = draft
+            case ("GET", "\(base)/participation-results"):
+                body = """
+                    {"totalCount":1,"results":[{"participant":\(participant),"title":"완료 결과","thumbnailUrl":"https://example.com/step"}]}
+                    """
+            case ("GET", "\(base)/participation-results/\(id)"), ("PUT", "\(base)/participation-results/\(id)"):
+                body = result
+            case ("DELETE", "\(base)/participation-results/\(id)"): body = "null"
+            default: throw URLError(.unsupportedURL)
+            }
+            return (200, Data("{\"isSuccess\":true,\"result\":\(body)}".utf8))
+        }
+
+        let repo = RoutineRepositoryImpl(networkManager: manager, accessToken: { token })
+        #expect(try await repo.participationDraft(routineID: id) == nil)
+        let inputDraft = RoutineParticipationDraft(title: "초안", cards: [nil, .init(time: "09:30")])
+        let request = try RoutineParticipationEndpoint.saveDraft(routineID: id, draft: inputDraft, headers: [:])
+            .asURLRequest()
+        let encoded = try decode(
+            RoutineParticipationDraftDTO.self, String(decoding: #require(request.httpBody), as: UTF8.self))
+        #expect(encoded.cards?.first == .some(nil))
+        #expect(encoded.cards?.last??.time == "09:30")
+        #expect(try await repo.saveParticipationDraft(routineID: id, draft: inputDraft) == inputDraft)
+        let page = try await repo.participationResults(routineID: id)
+        #expect(page.totalCount == 1)
+        #expect(page.results?.first?.thumbnailURL?.path == "/step")
+        let published = try await repo.participationResult(routineID: id, participantID: id)
+        #expect(published.participant?.id == "user")
+        #expect(published.work?.cards?.first??.imageID == id)
+        let detail = try await repo.participationResult(id: id, participantID: id)
+        #expect(detail.title == "완료 결과")
+        #expect(detail.cards?.first?.imageURL?.path == "/api/images/\(id)")
+        #expect(published.completedAt == (try Mapping.date("2026-11-22T00:30:00Z", "completedAt")))
+        #expect(try await repo.updateParticipationResult(routineID: id, participantID: id, input: input) == published)
+        try await repo.deleteParticipationResult(routineID: id, participantID: id)
+
+        #expect(throws: DataContractError.invalidValue("time")) {
+            try RoutineParticipationMapper.request(.init(cards: [.init(time: "24:00")]))
+        }
+    }
+
+    @Test func publicProfileTestAccountAndHealthContract() async throws {
+        let manager = network { request in
+            #expect(request.value(forHTTPHeaderField: "Authorization") == nil)
+            switch (request.httpMethod, request.url?.path) {
+            case ("GET", "/api/users/\(id)"):
+                return (
+                    200,
+                    Data(
+                        """
+                        {"isSuccess":true,"result":{"publicId":"\(id)","nickname":"테스터","bio":"한 줄"}}
+                        """.utf8)
+                )
+            case ("POST", "/api/test-accounts"):
+                return (
+                    201,
+                    Data(
+                        """
+                        {"isSuccess":true,"result":{"publicId":"\(id)","slot":2,"nickname":"테스터","available":true,"profileImagePublicId":"\(id)"}}
+                        """.utf8)
+                )
+            case ("GET", "/health"):
+                #expect(request.value(forHTTPHeaderField: "Accept") == "text/plain")
+                return (200, Data("OK".utf8))
+            default:
+                throw URLError(.unsupportedURL)
+            }
+        }
+
+        let users = UserRepositoryImpl(networkManager: manager, accessToken: { token })
+        #expect(try await users.profile(publicID: id).bio == "한 줄")
+        let input = TestAccountRegistration(slot: 2, nickname: "테스터", bio: "한 줄")
+        let registerBody = try #require(TestAccountEndpoint.register(input).asURLRequest().httpBody)
+        let encoded = try JSONSerialization.jsonObject(with: registerBody) as? [String: Any]
+        #expect(encoded?["slot"] as? Int == 2)
+        #expect(encoded?["bio"] as? String == "한 줄")
+        let account = try await TestAccountRepositoryImpl(network: manager).register(input)
+        #expect(account.profileImageID == id)
+        #expect(try await HealthRepositoryImpl(network: manager).status() == "OK")
+        #expect(throws: DataContractError.invalidValue("slot")) {
+            try TestAccountEndpoint.register(.init(slot: 8, nickname: "테스터"))
+        }
+    }
+
+    @Test func routineListMapsParticipationFields() async throws {
+        let manager = network { request in
+            let items = request.url.flatMap { URLComponents(url: $0, resolvingAgainstBaseURL: false) }?.queryItems
+            #expect(items?.first(where: { $0.name == "participantId" })?.value == id)
+            let body = """
+                {"isSuccess":true,"result":{"totalCount":5000000000,"routines":[
+                  {"routineId":"routine","title":"루틴 제목","likedByMe":true,"inProgressCount":2,
+                   "completedCount":3,"commentCount":4,"myParticipationStatus":"COMPLETED"}
+                ]}}
+                """
+            return (200, Data(body.utf8))
+        }
+        let page = try await RoutineRepositoryImpl(networkManager: manager, accessToken: { token })
+            .list(query: .init(participantID: id))
+        let routine = try #require(page.routines?.first)
+        #expect(page.totalCount == 5_000_000_000)
+        #expect(routine.likedByMe == true)
+        #expect(routine.inProgressCount == 2)
+        #expect(routine.completedCount == 3)
+        #expect(routine.commentCount == 4)
+        #expect(routine.participation == .completed)
     }
 
     @Test func homeLoadsServerOrderAndNextCursor() async throws {
@@ -122,27 +263,37 @@ struct DataDomainTests {
         var uploads = 0
         var saves = 0
         let manager = network { request in
-            if request.url?.path == "/api/images" {
+            if request.url?.path == "/api/images/step" {
                 uploads += 1
-                return (201, Data("""
-                    {"isSuccess":true,"result":{"imageId":"\(id)"}}
-                    """.utf8))
+                return (
+                    201,
+                    Data(
+                        """
+                        {"isSuccess":true,"result":{"imageId":"\(id)"}}
+                        """.utf8)
+                )
             }
             saves += 1
             if saves == 1 {
                 return (500, Data(#"{"isSuccess":false,"code":"TEST500","message":"다시 시도"}"#.utf8))
             }
-            return (201, Data("""
-                {"isSuccess":true,"result":{"routineId":"\(id)","title":"루틴 제목"}}
-                """.utf8))
+            return (
+                201,
+                Data(
+                    """
+                    {"isSuccess":true,"result":{"routineId":"\(id)","title":"루틴 제목"}}
+                    """.utf8)
+            )
         }
         let saver = RoutineDraftSaver(
             images: ImageRepositoryImpl(networkManager: manager, accessToken: { token }),
             routines: RoutineRepositoryImpl(networkManager: manager, accessToken: { token }))
-        let draft = RoutineDraft(title: "루틴 제목", introduction: nil, steps: [
-            .init(image: .init(data: Data([1])), time: .init(hour: 7, minute: 0), title: "아침 운동하기", content: nil),
-            .init(image: .init(data: Data([2])), time: .init(hour: 8, minute: 0), title: "아침 준비하기", content: nil)
-        ])
+        let draft = RoutineDraft(
+            title: "루틴 제목", introduction: nil,
+            steps: [
+                .init(image: .init(data: Data([1])), time: .init(hour: 7, minute: 0), title: "아침 운동하기", content: nil),
+                .init(image: .init(data: Data([2])), time: .init(hour: 8, minute: 0), title: "아침 준비하기", content: nil),
+            ])
         await #expect(throws: NetworkError.apiError(code: "TEST500", message: "다시 시도")) {
             try await saver.save(draft)
         }
@@ -366,6 +517,13 @@ struct DataDomainTests {
         ] {
             try decode(APIDeleteResponseDTO.self, json).checkSuccess()
         }
+        let failure = try decode(
+            APIResponseDTO<[UserResponseDTO]>.self,
+            """
+            {"isSuccess":false,"code":"COMMON400","message":"입력 오류","result":{"nickname":"길이 오류"}}
+            """)
+        #expect(failure.fieldErrors == ["nickname": "길이 오류"])
+        #expect(throws: NetworkError.apiError(code: "COMMON400", message: "입력 오류")) { try failure.value() }
         #expect(try decode(RoutineCardResponseDTO.self, #"{"title":"제목"}"#).imageId == nil)
     }
 
@@ -402,6 +560,7 @@ struct DataDomainTests {
                 "/api/routines/\(id)/comments/\(id)", true
             ),
             (ImageEndpoint.upload(headers: headers), "POST", "/api/images", true),
+            (ImageEndpoint.uploadStep(headers: headers), "POST", "/api/images/step", true),
             (ImageEndpoint.uploadProfile(headers: headers), "POST", "/api/images/profile", true),
             (try ImageEndpoint.data(id: id), "GET", "/api/images/\(id)", false),
         ]
@@ -412,11 +571,11 @@ struct DataDomainTests {
             #expect(request.value(forHTTPHeaderField: "Authorization") == (authenticated ? "Bearer \(token)" : nil))
             #expect(request.value(forHTTPHeaderField: "X-Device-Token") == nil)
         }
-        let query = RoutineListQuery(sort: .likes, authorID: id, cursor: "a+b/=", size: 50)
+        let query = RoutineListQuery(sort: .likes, authorID: id, participantID: id, cursor: "a+b/=", size: 50)
         let request = try RoutineEndpoint.list(query: query).asURLRequest()
         let items = URLComponents(url: try #require(request.url), resolvingAgainstBaseURL: false)?.queryItems ?? []
         let values = Dictionary(uniqueKeysWithValues: items.map { ($0.name, $0.value ?? "") })
-        #expect(values == ["sort": "likes", "authorId": id, "cursor": "a+b/=", "size": "50"])
+        #expect(values == ["sort": "likes", "authorId": id, "participantId": id, "cursor": "a+b/=", "size": "50"])
         let save = try RoutineEndpoint.save(input: input, headers: headers).asURLRequest()
         let saveBody = try #require(save.httpBody)
         let object = try JSONSerialization.jsonObject(with: saveBody)
@@ -525,7 +684,7 @@ struct DataDomainTests {
         try await comment.delete(routineID: id, commentID: id)
         let image: any ImageRepository = ImageRepositoryImpl(networkManager: network, accessToken: { token })
         #expect(
-            try await image.upload(
+            try await image.uploadGeneral(
                 input: .init(data: Data("image-bytes".utf8), fileName: "test.jpg", mimeType: "image/jpeg")
             ).id == "image")
         #expect(try await image.data(id: id) == Data([1, 2, 3]))
@@ -551,7 +710,9 @@ struct DataDomainTests {
         await #expect(throws: DataContractError.invalidValue("file")) {
             try await image.upload(input: .init(data: Data(), fileName: "image.jpg", mimeType: "image/jpeg"))
         }
-        for (fileName, mimeType) in [("bad\r\nname", "image/jpeg"), ("bad\0name", "image/jpeg"), ("image.jpg", "image/jpeg;invalid")] {
+        for (fileName, mimeType) in [
+            ("bad\r\nname", "image/jpeg"), ("bad\0name", "image/jpeg"), ("image.jpg", "image/jpeg;invalid"),
+        ] {
             await #expect(throws: DataContractError.invalidValue("file")) {
                 try await image.upload(input: .init(data: Data([1]), fileName: fileName, mimeType: mimeType))
             }

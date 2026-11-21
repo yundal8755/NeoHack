@@ -4,6 +4,9 @@ nonisolated enum ImageEndpoint {
     static func upload(headers: [String: String]) -> APIEndpoint {
         APIEndpoint(method: .post, path: "api/images", headers: headers)
     }
+    static func uploadStep(headers: [String: String]) -> APIEndpoint {
+        APIEndpoint(method: .post, path: "api/images/step", headers: headers)
+    }
     static func uploadProfile(headers: [String: String]) -> APIEndpoint {
         APIEndpoint(method: .post, path: "api/images/profile", headers: headers)
     }

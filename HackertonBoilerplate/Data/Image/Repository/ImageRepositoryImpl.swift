@@ -13,16 +13,25 @@ final class ImageRepositoryImpl: ImageRepository {
         try Mapping.bearerHeaders(accessToken)
     }
 
-    func upload(input: ImageUploadInput) async throws -> UploadedImageEntity {
+    func uploadGeneral(input: ImageUploadInput) async throws -> UploadedImageEntity {
         try await upload(ImageEndpoint.upload(headers: headers()), input: input)
     }
 
+    func uploadStep(input: ImageUploadInput) async throws -> UploadedImageEntity {
+        try Self.validateSmallImage(input)
+        return try await upload(ImageEndpoint.uploadStep(headers: headers()), input: input)
+    }
+
     func uploadProfile(input: ImageUploadInput) async throws -> UploadedImageEntity {
-        guard input.data.count <= 5_000_000 else { throw ProfileImageUploadError.tooLarge }
+        try Self.validateSmallImage(input)
+        return try await upload(ImageEndpoint.uploadProfile(headers: headers()), input: input)
+    }
+
+    nonisolated private static func validateSmallImage(_ input: ImageUploadInput) throws {
+        guard input.data.count <= 5_000_000 else { throw SmallImageUploadError.tooLarge }
         guard ["image/jpeg", "image/png", "image/heic", "image/heif"].contains(input.mimeType.lowercased()) else {
             throw DataContractError.invalidValue("file")
         }
-        return try await upload(ImageEndpoint.uploadProfile(headers: headers()), input: input)
     }
 
     private func upload(_ endpoint: APIEndpoint, input: ImageUploadInput) async throws -> UploadedImageEntity {
@@ -43,7 +52,7 @@ final class ImageRepositoryImpl: ImageRepository {
     }
 }
 
-private enum ProfileImageUploadError: LocalizedError {
+nonisolated private enum SmallImageUploadError: LocalizedError {
     case tooLarge
-    var errorDescription: String? { "프로필 사진은 5MB까지 올릴 수 있어요." }
+    var errorDescription: String? { "사진은 5MB까지 올릴 수 있어요." }
 }

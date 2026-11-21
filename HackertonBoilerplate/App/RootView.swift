@@ -32,26 +32,15 @@ struct RootView: View {
             LiveHome(session: session)
                 .id(session.id)
         } else {
-            VStack(spacing: AppSpacing.md) {
-                Text("사용자 선택").appFont(AppFont.body1)
-                ForEach(accounts.entries) { account in
-                    PrimaryButton(account.available ? account.nickname : "\(account.nickname) (사용 중)") {
-                        accounts.choose(account)
-                    }
-                    .disabled(accounts.isLoading || !account.available)
-                    .accessibilityIdentifier("account.slot.\(account.slot)")
-                }
-                if accounts.entries.isEmpty && !accounts.isLoading && accounts.error == nil {
-                    Text("등록된 테스트 계정이 없어요.")
-                }
-                Button("계정 목록 새로고침") { Task { await accounts.load() } }
-                    .disabled(accounts.isLoading)
-                if accounts.isLoading { ProgressView() }
-                if let error = accounts.error { Text(error).foregroundStyle(AppColor.textSecondary) }
-            }
-            .padding(AppSpacing.md)
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .background(AppColor.background)
+            AccountSelectView(
+                entries: accounts.entries,
+                connectingID: accounts.connectingID,
+                isLoading: accounts.isLoading,
+                error: accounts.error,
+                onSelect: { accounts.choose($0) },
+                onRefresh: { await accounts.load() },
+                onDismissError: { accounts.dismissError() }
+            )
             .task { if accounts.entries.isEmpty { await accounts.load() } }
         }
     }

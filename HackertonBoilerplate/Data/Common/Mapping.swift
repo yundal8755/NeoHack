@@ -39,6 +39,9 @@ nonisolated enum Mapping {
         }
         return value
     }
+    static func isCardTime(_ value: String) -> Bool {
+        value.range(of: #"^([01][0-9]|2[0-3]):[0-5][0-9]\z"#, options: .regularExpression) != nil
+    }
     static func bearerHeaders(_ token: () throws -> String) throws -> [String: String] {
         let value = try token()
         guard value.range(of: #"^[A-Za-z0-9._~+/-]+=*\z"#, options: .regularExpression) != nil else {

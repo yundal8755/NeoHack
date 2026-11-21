@@ -83,6 +83,28 @@ struct ComponentSnapshotTests {
         assertSnapshot(of: view.snapshotContainer(), as: .component, named: isRequired ? "required" : "optional")
     }
 
+    @Test(arguments: ["available", "inUse", "connecting"])
+    func accountCard(status: String) {
+        let cardStatus: AccountCard.Status = switch status {
+        case "inUse": .inUse
+        case "connecting": .connecting
+        default: .available
+        }
+        let view = AccountCard(nickname: "김햄찌", slot: 1, status: cardStatus) {}
+        assertSnapshot(of: view.snapshotContainer(), as: .component, named: status)
+    }
+
+    @Test func accountCardLongNickname() {
+        let view = AccountCard(nickname: "아주아주긴닉네임을가진테스트계정사용자입니다", slot: 7, status: .available) {}
+        assertSnapshot(of: view.snapshotContainer(), as: .component)
+    }
+
+    @Test(arguments: [false, true])
+    func accountSelectHeader(isRefreshing: Bool) {
+        let view = AccountSelectHeader(isRefreshing: isRefreshing) {}
+        assertSnapshot(of: view.snapshotContainer(), as: .component, named: isRefreshing ? "refreshing" : "idle")
+    }
+
     @Test func timeChip() {
         let view = HStack(spacing: AppSpacing.inlineLabelGap) {
             FieldTitle("시간", isRequired: true)

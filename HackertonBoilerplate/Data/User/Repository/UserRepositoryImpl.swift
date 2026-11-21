@@ -18,6 +18,12 @@ final class UserRepositoryImpl: UserRepository {
             UserEndpoint.updateProfile(update, headers: headers()), as: APIResponseDTO<UserResponseDTO>.self)
         return try UserMapper.map(response.value())
     }
+    func profile(publicID: String) async throws -> UserEntity {
+        let response = try await network.request(
+            UserEndpoint.profile(publicID: publicID), as: APIResponseDTO<UserResponseDTO>.self)
+        return try UserMapper.map(response.value())
+    }
+
     func me() async throws -> UserEntity {
         let response = try await network.request(
             UserEndpoint.me(headers: headers()), as: APIResponseDTO<UserResponseDTO>.self)

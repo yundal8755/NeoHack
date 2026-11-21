@@ -18,6 +18,15 @@ struct AppLaunchConfigurationTests {
     }
 
     @Test(arguments: [
+        (AppLaunchConfiguration.DataMode.live, true),
+        (.mock(.default), false),
+        (.mock("loginFailure"), false),
+    ])
+    func 목_모드에서는_스플래시를_건너뛴다(mode: AppLaunchConfiguration.DataMode, expected: Bool) {
+        #expect(AppLaunchConfiguration(dataMode: mode).showsSplash == expected)
+    }
+
+    @Test(arguments: [
         AppLaunchConfiguration.DataMode.live,
         .mock(.default),
         .mock("loginFailure"),

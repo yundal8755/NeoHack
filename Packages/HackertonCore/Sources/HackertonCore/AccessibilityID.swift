@@ -33,6 +33,10 @@ public enum AccessibilityID {
         public static let homeScreen = "root.homeScreen"
     }
 
+    public enum Splash {
+        public static let screen = "splash.screen"
+    }
+
     public enum RoutineCreate {
         /// 사진을 고르기 전 루틴 만들기 진입 화면.
         public static let entry = "routineCreate.entry"

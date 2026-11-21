@@ -32,6 +32,11 @@ public struct AppLaunchConfiguration: Equatable, Sendable {
         self.init(dataMode: .mock(scenario ?? .default))
     }
 
+    /// 목 모드는 UI 테스트가 실행 직후 화면을 조작하므로 스플래시를 건너뛴다.
+    public var showsSplash: Bool {
+        dataMode == .live
+    }
+
     public static var current: Self {
         Self(arguments: ProcessInfo.processInfo.arguments)
     }

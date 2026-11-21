@@ -1,3 +1,4 @@
+import HackertonCore
 import Kingfisher
 import SwiftUI
 
@@ -15,7 +16,9 @@ struct HackertonBoilerplateApp: App {
 
     var body: some Scene {
         WindowGroup {
-            RootView()
+            SplashContainer(showsSplash: AppContainer.shared.configuration.showsSplash) {
+                RootView()
+            }
         }
     }
 }

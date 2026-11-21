@@ -10,9 +10,12 @@ struct RoutineCreateView: View {
 
     @StateObject private var store: StoreOf<Feature>
     private let isParticipation: Bool
+    private let title: String
+    private let submitTitle: String
     private let onFinish: (Feature.Outcome) -> Void
 
     @State private var imageError: FeedbackMessage?
+    @State private var photoTask: Task<Void, Never>?
     @State private var replacingImageItem: PhotosPickerItem?
     @FocusState private var focusedField: Field?
 
@@ -23,10 +26,15 @@ struct RoutineCreateView: View {
         case routineIntroduction
     }
 
-    init(store: StoreOf<Feature>, isParticipation: Bool = false, onFinish: @escaping (Feature.Outcome) -> Void = { _ in }) {
+    init(
+        store: StoreOf<Feature>, isParticipation: Bool = false, editingTitle: String? = nil,
+        onFinish: @escaping (Feature.Outcome) -> Void = { _ in }
+    ) {
         _store = StateObject(wrappedValue: store)
         self.onFinish = onFinish
         self.isParticipation = isParticipation
+        title = editingTitle ?? (isParticipation ? "루틴 따라하기" : "루틴 만들기")
+        submitTitle = editingTitle == nil ? "완료" : "저장"
     }
 
     private var state: Feature.State { store.state }
@@ -35,7 +43,7 @@ struct RoutineCreateView: View {
         // 스크롤 영역만 키보드를 피하고, 하단 버튼은 키보드를 따라 올라오지 않도록 키보드 영역을 무시한다.
         ZStack(alignment: .bottom) {
             VStack(spacing: 0) {
-                AppTopBar(isParticipation ? "루틴 따라하기" : "루틴 만들기", trailing: .exit { store.send(.exitTapped) })
+                AppTopBar(title, trailing: .exit { store.send(.exitTapped) })
 
                 ScrollView {
                     VStack(spacing: 0) {
@@ -79,6 +87,7 @@ struct RoutineCreateView: View {
             }
         }
         .feedbackPopup($imageError)
+        .onDisappear { photoTask?.cancel() }
         .onChange(of: state.page) { _, _ in
             focusedField = nil
         }
@@ -119,8 +128,9 @@ struct RoutineCreateView: View {
         VStack(alignment: .leading, spacing: AppSpacing.md) {
             PhotosPicker(selection: $replacingImageItem, matching: .images, photoLibrary: .shared()) {
                 ZStack {
-                    if step.requiresImageUpload {
-                        NetworkImageView(url: step.referenceImageURL, borderColor: nil, showsLoadingText: false)
+                    switch step.photo {
+                    case let .reference(url):
+                        NetworkImageView(url: url, borderColor: nil, showsLoadingText: false)
                             .opacity(0.25)
                         VStack(spacing: AppSpacing.xs) {
                             Image(systemName: "camera.fill").font(.title2)
@@ -128,8 +138,12 @@ struct RoutineCreateView: View {
                             Text("배경 사진은 참고용이에요").appFont(AppFont.caption1)
                         }
                         .foregroundStyle(AppColor.textPrimary)
-                    } else {
-                        RoutineImageView(image: step.image)
+                    case let .stored(_, url):
+                        NetworkImageView(
+                            url: url, downsamplingSize: CGSize(width: 600, height: 338),
+                            borderColor: nil, showsLoadingText: false)
+                    case let .local(image):
+                        RoutineImageView(image: image)
                     }
                 }
                     .frame(maxWidth: .infinity)
@@ -189,7 +203,7 @@ struct RoutineCreateView: View {
                 .accessibilityIdentifier(AccessibilityID.RoutineCreate.routineTitleField)
             }
 
-            FormField("루틴 소개", guide: "최대 100자까지 입력 가능해요.") {
+            FormField("루틴 소개", guide: "최대 \(state.introductionLimit)자까지 입력 가능해요.") {
                 AppTextField(
                     "나의 루틴을 소개해 주세요.",
                     text: Binding(
@@ -197,7 +211,7 @@ struct RoutineCreateView: View {
                         set: { store.send(.routineIntroductionChanged($0)) }
                     ),
                     axis: .vertical,
-                    maxLength: Feature.routineIntroductionMaxLength
+                    maxLength: state.introductionLimit
                 )
                 .focused($focusedField, equals: .routineIntroduction)
                 .accessibilityIdentifier(AccessibilityID.RoutineCreate.routineIntroductionField)
@@ -221,7 +235,7 @@ struct RoutineCreateView: View {
                     .disabled(!state.isNextEnabled)
                     .accessibilityIdentifier(AccessibilityID.RoutineCreate.nextButton)
             } else {
-                PrimaryButton("완료") { store.send(.completeTapped) }
+                PrimaryButton(submitTitle) { store.send(.completeTapped) }
                     .disabled(!state.isCompleteEnabled)
                     .accessibilityIdentifier(AccessibilityID.RoutineCreate.completeButton)
             }
@@ -234,26 +248,34 @@ struct RoutineCreateView: View {
     // MARK: - 이미지 교체
 
     private func replaceImage(with item: PhotosPickerItem) {
-        Task {
-            defer { replacingImageItem = nil }
+        guard let stepID = state.currentStep?.id else { return }
+        photoTask?.cancel()
+        photoTask = Task {
+            defer { if !Task.isCancelled { replacingImageItem = nil } }
             do {
                 guard
                     let data = try await item.loadTransferable(type: Data.self),
                     let resized = await Self.resize(data)
                 else {
-                    imageError = FeedbackMessage(kind: .error, title: "사진을 불러오지 못했어요", message: "다른 사진을 선택해 주세요.")
+                    if !Task.isCancelled {
+                        imageError = FeedbackMessage(kind: .error, title: "사진을 불러오지 못했어요", message: "다른 사진을 선택해 주세요.")
+                    }
                     return
                 }
-                store.send(.stepImageReplaced(RoutineImage(data: resized)))
+                var time: TimeOfDay?
                 if isParticipation {
                     let capturedAt = await Task.detached(priority: .userInitiated) {
                         ImageDownsampler.capturedDate(of: data)
                     }.value
-                    store.send(.timeSelected(Self.timeOfDay(from: capturedAt ?? Date())))
+                    time = Self.timeOfDay(from: capturedAt ?? Date())
                 }
+                try Task.checkCancellation()
+                store.send(.stepPhotoLoaded(id: stepID, image: RoutineImage(data: resized), time: time))
             } catch {
-                imageError = FeedbackMessage(kind: .error, title: "사진을 불러오지 못했어요", message: "다시 선택해 주세요.")
-                AppLogger.error("스텝 이미지를 불러오지 못했어요: \(error)")
+                if !Task.isCancelled {
+                    imageError = FeedbackMessage(kind: .error, title: "사진을 불러오지 못했어요", message: "다시 선택해 주세요.")
+                    AppLogger.error("스텝 이미지를 불러오지 못했어요: \(error)")
+                }
             }
         }
     }

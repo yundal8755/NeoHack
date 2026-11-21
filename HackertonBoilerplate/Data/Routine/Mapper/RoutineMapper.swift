@@ -23,9 +23,11 @@ nonisolated enum RoutineMapper {
                     let right = rhs.element.order ?? Int.max
                     return left == right ? lhs.offset < rhs.offset : left < right
                 }.map { _, card in
-                    try RoutineCardEntity(
-                        id: card.cardId, order: card.order, imageURL: Mapping.url(card.imageUrl, "imageUrl"),
-                        imageID: Mapping.identity(card.imageId, "imageId"),
+                    let imageID = try Mapping.identity(card.imageId, "imageId")
+                    return try RoutineCardEntity(
+                        id: card.cardId, order: card.order,
+                        imageURL: Mapping.url(card.imageUrl, "imageUrl") ?? ImageEndpoint.imageURL(id: imageID),
+                        imageID: imageID,
                         title: Mapping.required(card.title, "card.title"), content: card.content,
                         time: Mapping.required(card.time, "time"))
                 }
@@ -62,7 +64,7 @@ nonisolated enum RoutineMapper {
             let imageID = try Mapping.identity(card.imageID, "imageId")
             return try RoutineCardEntity(
                 id: "step-\(index)", order: index,
-                imageURL: ImageEndpoint.data(id: imageID).asURLRequest().url,
+                imageURL: ImageEndpoint.imageURL(id: imageID),
                 imageID: imageID, title: Mapping.required(card.title, "card.title"),
                 content: card.content, time: Mapping.required(card.time, "time"))
         }

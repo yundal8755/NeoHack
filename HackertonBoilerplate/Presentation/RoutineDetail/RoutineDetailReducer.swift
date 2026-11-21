@@ -54,6 +54,12 @@ nonisolated struct RoutineDetailReducer: Reducer {
     struct State: Equatable {
         var title: String
         var introduction: String?
+        var entity: RoutineDetailEntity?
+
+        var canEdit: Bool {
+            let ownsContent = isParticipationResult ? isParticipationOwner : isOwner
+            return ownsContent && entity != nil && !isBusy && !isLoading
+        }
         var steps: [Step]
         var comments: [Comment]
         var isLiked = false
@@ -150,6 +156,7 @@ nonisolated struct RoutineDetailReducer: Reducer {
         case .loaded(let detail, let comments, let interactions):
             state.isLoading = false
             state.loaded = true
+            state.entity = detail
             state.title = detail.title
             state.introduction = detail.content
             state.isOwner = resultParticipantID == nil && (userID.map { detail.owner?.id == $0 } ?? false)

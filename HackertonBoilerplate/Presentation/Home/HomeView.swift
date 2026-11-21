@@ -9,6 +9,7 @@ struct HomeView: View {
     @State private var navigationPath: [DetailRoute] = []
     @State private var participationCompletedID: UUID?
     @State private var deletedRoutineID: String?
+    @State private var routineUpdatedID: UUID?
     @State private var isHomeDragging = false
     @State private var isSortExpanded = false
     @State private var isProfilePresented = false
@@ -57,6 +58,9 @@ struct HomeView: View {
                         closeDetail()
                         participationCompletedID = UUID()
                         isProfilePresented = true
+                    }, onUpdated: {
+                        store.send(.refresh)
+                        routineUpdatedID = UUID()
                     }, onBack: closeDetail) {
                         if route.participantID != nil {
                             participationCompletedID = UUID()
@@ -88,7 +92,8 @@ struct HomeView: View {
     private var profileView: some View {
         if let session {
             MyProfileView(
-                session: session, deletedRoutineID: deletedRoutineID, participationCompletedID: participationCompletedID, onRoutineSelected: showRoutine,
+                session: session, deletedRoutineID: deletedRoutineID, participationCompletedID: participationCompletedID,
+                routineUpdatedID: routineUpdatedID, onRoutineSelected: showRoutine,
                 onBack: closeProfile)
         } else {
             #if DEBUG

@@ -15,14 +15,24 @@ public struct RoutineImage: Equatable, Hashable, Sendable {
 /// 루틴 작성을 마쳤을 때 만들어지는 입력값. 서버 저장 Repository가 생기면 이 값을 넘긴다.
 public struct RoutineDraft: Equatable, Sendable {
     public struct Step: Equatable, Sendable {
-        public let image: RoutineImage
+        public enum Photo: Equatable, Sendable {
+            case local(RoutineImage)
+            case stored(id: String, url: URL?)
+            case reference(URL?)
+        }
+
+        public let photo: Photo
         public let time: TimeOfDay
         public let title: String
         /// 선택 항목. 입력하지 않았으면 nil.
         public let content: String?
 
         public init(image: RoutineImage, time: TimeOfDay, title: String, content: String?) {
-            self.image = image
+            self.init(photo: .local(image), time: time, title: title, content: content)
+        }
+
+        public init(photo: Photo, time: TimeOfDay, title: String, content: String?) {
+            self.photo = photo
             self.time = time
             self.title = title
             self.content = content

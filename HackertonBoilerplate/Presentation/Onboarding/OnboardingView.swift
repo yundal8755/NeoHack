@@ -5,7 +5,7 @@ import SwiftUI
 /// Figma `온보딩` 프레임 3장. 캐릭터, 제목, 설명을 페이지로 넘기고 하단 다음 버튼으로 진행한다.
 /// 마지막 페이지에서 다음을 누르면 `onFinish`를 호출한다.
 struct OnboardingView: View {
-    typealias Feature = OnboardingReducer
+    typealias Feature = HackertonCore.OnboardingReducer
 
     /// Figma 온보딩 페이지 문구와 그래픽. 그래픽이 없는 페이지도 같은 자리를 비워 문구 위치를 맞춘다.
     struct Page: Equatable {
@@ -136,16 +136,16 @@ struct OnboardingContainer<Content: View>: View {
     static var completedKey: String { "hasCompletedOnboarding" }
 
     @AppStorage(Self.completedKey) private var hasCompleted = false
-    @State private var store = StoreOf<OnboardingReducer>(
-        state: .init(pageCount: OnboardingView.Page.all.count),
-        reducer: OnboardingReducer()
-    )
+    @StateObject private var store: StoreOf<HackertonCore.OnboardingReducer>
     private let isEnabled: Bool
     private let content: Content
 
     init(isEnabled: Bool, @ViewBuilder content: () -> Content) {
         self.isEnabled = isEnabled
         self.content = content()
+        _store = StateObject(wrappedValue: StoreOf<HackertonCore.OnboardingReducer>(
+            state: HackertonCore.OnboardingReducer.State(pageCount: OnboardingView.Page.all.count),
+            reducer: HackertonCore.OnboardingReducer()))
     }
 
     private var showsOnboarding: Bool {
@@ -170,8 +170,8 @@ struct OnboardingContainer<Content: View>: View {
 }
 
 #Preview("온보딩") {
-    OnboardingView(store: StoreOf<OnboardingReducer>(
+    OnboardingView(store: StoreOf<HackertonCore.OnboardingReducer>(
         state: .init(pageCount: OnboardingView.Page.all.count),
-        reducer: OnboardingReducer()
+        reducer: HackertonCore.OnboardingReducer()
     ))
 }

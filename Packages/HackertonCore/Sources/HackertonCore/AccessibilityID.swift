@@ -22,6 +22,11 @@ public enum AccessibilityID {
         public static func routine(_ id: String) -> String { "home.routine.\(id)" }
     }
     public enum RoutineDetail {
+        public static let editButton = "routineDetail.edit"
+        public static let resultsButton = "routineDetail.results"
+        public static let resultsScreen = "routineDetail.resultsScreen"
+        public static let authorProfileButton = "routineDetail.authorProfile"
+        public static let publicProfileScreen = "routineDetail.publicProfileScreen"
         public static let screen = "routineDetail.screen"
         public static let likeButton = "routineDetail.likeButton"
         public static let commentsButton = "routineDetail.commentsButton"

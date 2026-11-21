@@ -11,6 +11,11 @@ struct RoutineDetailView: View {
     @State private var isParticipationPresented = false
     private let session: ProfileSession?
     private let routineID: String?
+    private let resultParticipantID: String?
+    private let onUpdated: () -> Void
+    @State private var isEditPresented = false
+    @State private var isResultsPresented = false
+    @State private var isPublicProfilePresented = false
     private let onParticipationCompleted: () -> Void
     @State private var feedbackID = UUID()
     @Environment(\.dismiss) private var dismiss
@@ -19,10 +24,12 @@ struct RoutineDetailView: View {
     private let onBack: (() -> Void)?
     private let onDelete: () -> Void
 
-    init(store: StoreOf<RoutineDetailReducer>, session: ProfileSession? = nil, routineID: String? = nil, onParticipationCompleted: @escaping () -> Void = {}, onBack: (() -> Void)? = nil, onDelete: @escaping () -> Void = {}) {
+    init(store: StoreOf<RoutineDetailReducer>, session: ProfileSession? = nil, routineID: String? = nil, resultParticipantID: String? = nil, onParticipationCompleted: @escaping () -> Void = {}, onUpdated: @escaping () -> Void = {}, onBack: (() -> Void)? = nil, onDelete: @escaping () -> Void = {}) {
         self.store = store
         self.session = session
         self.routineID = routineID
+        self.resultParticipantID = resultParticipantID
+        self.onUpdated = onUpdated
         self.onParticipationCompleted = onParticipationCompleted
         self.onBack = onBack
         self.onDelete = onDelete
@@ -39,16 +46,23 @@ struct RoutineDetailView: View {
             )
             .overlay(alignment: .topTrailing) {
                 if isRoutineMenuPresented {
-                    Button(role: .destructive) {
-                        isRoutineMenuPresented = false
-                        isDeleteRoutinePresented = true
-                    } label: {
-                        Text(store.state.isParticipationResult ? "참여 기록 삭제" : "삭제하기")
-                            .appFont(AppFont.caption1)
-                            .foregroundStyle(.red)
-                            .frame(minWidth: 130, minHeight: 44)
-                            .padding(.horizontal, AppSpacing.sm)
-                            .contentShape(Rectangle())
+                    VStack(spacing: 0) {
+                        if session != nil, store.state.canEdit {
+                            Button {
+                                isRoutineMenuPresented = false
+                                isEditPresented = true
+                            } label: {
+                                menuLabel(store.state.isParticipationResult ? "참여 기록 수정" : "수정하기")
+                            }
+                            .accessibilityIdentifier(AccessibilityID.RoutineDetail.editButton)
+                        }
+                        Button(role: .destructive) {
+                            isRoutineMenuPresented = false
+                            isDeleteRoutinePresented = true
+                        } label: {
+                            menuLabel(store.state.isParticipationResult ? "참여 기록 삭제" : "삭제하기")
+                                .foregroundStyle(.red)
+                        }
                     }
                     .buttonStyle(.plain)
                     .background(AppColor.background, in: RoundedRectangle(cornerRadius: AppRadius.button))
@@ -69,6 +83,20 @@ struct RoutineDetailView: View {
                 ScrollViewReader { proxy in
                     ScrollView {
                         VStack(alignment: .leading, spacing: 0) {
+                            if session != nil, let owner = store.state.entity?.owner {
+                                Button {
+                                    isPublicProfilePresented = true
+                                } label: {
+                                    HStack(spacing: AppSpacing.xs) {
+                                        ProfileAvatar(url: owner.profileImageURL, size: 32)
+                                        Text(owner.nickname ?? "프로필").appFont(AppFont.caption1)
+                                    }
+                                    .foregroundStyle(AppColor.textPrimary)
+                                    .frame(minHeight: 44)
+                                }
+                                .buttonStyle(.plain)
+                                .accessibilityIdentifier(AccessibilityID.RoutineDetail.authorProfileButton)
+                            }
                             if store.state.isParticipationResult, let introduction = store.state.introduction,
                                !introduction.isEmpty {
                                 Text(introduction)
@@ -161,6 +189,34 @@ struct RoutineDetailView: View {
                 }
             }
         }
+        .fullScreenCover(isPresented: $isEditPresented) {
+            if let session, let routineID, let entity = store.state.entity {
+                RoutineEditView(
+                    detail: entity,
+                    target: resultParticipantID.map { .participation(routineID: routineID, participantID: $0) }
+                        ?? .routine(id: routineID),
+                    repositories: session.repositories,
+                    onSaved: {
+                        isEditPresented = false
+                        store.send(.load)
+                        onUpdated()
+                    },
+                    onCancel: { isEditPresented = false })
+            }
+        }
+        .sheet(isPresented: $isResultsPresented) {
+            if let session, let routineID {
+                ParticipationResultsView(routineID: routineID, session: session) {
+                    store.send(.load)
+                    onUpdated()
+                }
+            }
+        }
+        .sheet(isPresented: $isPublicProfilePresented) {
+            if let session, let owner = store.state.entity?.owner {
+                PublicProfileView(publicID: owner.id, users: session.repositories.users)
+            }
+        }
         .sheet(isPresented: $isCommentsPresented) {
             commentsSheet
                 .presentationDetents([.medium, .large])
@@ -249,12 +305,30 @@ struct RoutineDetailView: View {
 
             Text("참여중 \(store.state.participatingCount)")
                 .foregroundStyle(AppColor.primary)
-            Text("참여 완료 \(store.state.completedCount)")
-                .foregroundStyle(AppColor.gray500)
+            if session != nil, routineID != nil {
+                Button { isResultsPresented = true } label: {
+                    Text("참여 완료 \(store.state.completedCount)")
+                        .foregroundStyle(AppColor.primary)
+                        .frame(minHeight: 44)
+                        .contentShape(Rectangle())
+                }
+                .accessibilityIdentifier(AccessibilityID.RoutineDetail.resultsButton)
+            } else {
+                Text("참여 완료 \(store.state.completedCount)")
+                    .foregroundStyle(AppColor.gray500)
+            }
         }
         .appFont(AppFont.caption1.weight(.medium))
         .fixedSize(horizontal: true, vertical: false)
         .buttonStyle(.plain)
+    }
+
+    private func menuLabel(_ title: String) -> some View {
+        Text(title)
+            .appFont(AppFont.caption1)
+            .frame(minWidth: 130, minHeight: 44)
+            .padding(.horizontal, AppSpacing.sm)
+            .contentShape(Rectangle())
     }
 
     private func countLabel(_ icon: String, count: Int) -> some View {

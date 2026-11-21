@@ -214,10 +214,11 @@ struct ProfileEditView: View {
         guard let selection else { return }
         defer { if !Task.isCancelled { isLoadingPhoto = false } }
         photoError = nil
+        let maxPixelSize = Self.maxPixelSize
         do {
             guard let data = try await selection.loadTransferable(type: Data.self),
                 let jpeg = await Task.detached(priority: .userInitiated, operation: {
-                    ImageDownsampler.downsampledJPEGData(from: data, maxPixelSize: Self.maxPixelSize)
+                    ImageDownsampler.downsampledJPEGData(from: data, maxPixelSize: maxPixelSize)
                 }).value
             else {
                 if !Task.isCancelled { photoError = Self.photoErrorMessage }

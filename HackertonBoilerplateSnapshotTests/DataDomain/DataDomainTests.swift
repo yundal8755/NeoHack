@@ -148,7 +148,7 @@ struct DataDomainTests {
                     200,
                     Data(
                         """
-                        {"isSuccess":true,"result":{"publicId":"\(id)","nickname":"테스터","bio":"한 줄"}}
+                        {"isSuccess":true,"result":{"publicId":"\(id)","nickname":"테스터","bio":"한 줄","profileImagePublicId":"\(id)"}}
                         """.utf8)
                 )
             case ("POST", "/api/test-accounts"):
@@ -168,7 +168,9 @@ struct DataDomainTests {
         }
 
         let users = UserRepositoryImpl(networkManager: manager, accessToken: { token })
-        #expect(try await users.profile(publicID: id).bio == "한 줄")
+        let profile = try await users.profile(publicID: id)
+        #expect(profile.bio == "한 줄")
+        #expect(profile.profileImageURL?.path == "/api/images/\(id)")
         let input = TestAccountRegistration(slot: 2, nickname: "테스터", bio: "한 줄")
         let registerBody = try #require(TestAccountEndpoint.register(input).asURLRequest().httpBody)
         let encoded = try JSONSerialization.jsonObject(with: registerBody) as? [String: Any]
@@ -300,6 +302,100 @@ struct DataDomainTests {
         #expect(try await saver.save(draft).id == id)
         #expect(saves == 2)
         #expect(uploads == 2)
+    }
+
+    @Test func editsUseTheCorrectPUTAndKeepUnchangedImages() async throws {
+        let replacementID = "01KB0000000000000000DEF002"
+        var savedPaths: [String] = []
+        var uploads = 0
+        let manager = network { request in
+            let path = try #require(request.url?.path)
+            if path == "/api/images/step" {
+                uploads += 1
+                return (201, Data("""
+                    {"isSuccess":true,"result":{"imageId":"\(replacementID)"}}
+                    """.utf8))
+            }
+            #expect(request.httpMethod == "PUT")
+            savedPaths.append(path)
+            let body = try request.httpBody ?? request.httpBodyStream.map { stream in
+                stream.open()
+                defer { stream.close() }
+                var data = Data()
+                var buffer = [UInt8](repeating: 0, count: 1024)
+                while stream.hasBytesAvailable {
+                    let count = stream.read(&buffer, maxLength: buffer.count)
+                    guard count >= 0 else { throw URLError(.cannotDecodeRawData) }
+                    if count == 0 { break }
+                    data.append(contentsOf: buffer.prefix(count))
+                }
+                return data
+            }
+            let json = try JSONSerialization.jsonObject(with: #require(body)) as? [String: Any]
+            let cards = try #require(json?["cards"] as? [[String: Any]])
+            #expect(cards.compactMap { $0["imageId"] as? String } == [id, replacementID])
+            if savedPaths.count == 1 {
+                return (500, Data(#"{"isSuccess":false,"code":"TEST500","message":"다시 시도"}"#.utf8))
+            }
+            return (200, Data("""
+                {"isSuccess":true,"result":{"routineId":"\(id)","title":"수정한 루틴"}}
+                """.utf8))
+        }
+        let saver = RoutineDraftSaver(
+            images: ImageRepositoryImpl(networkManager: manager, accessToken: { token }),
+            routines: RoutineRepositoryImpl(networkManager: manager, accessToken: { token }))
+        let draft = RoutineDraft(title: "수정한 루틴", introduction: nil, steps: [
+            .init(photo: .stored(id: id, url: nil), time: .init(hour: 7, minute: 0), title: "아침 준비하기", content: nil),
+            .init(image: .init(data: Data([1])), time: .init(hour: 8, minute: 0), title: "아침 운동하기", content: nil),
+        ])
+        await #expect(throws: NetworkError.apiError(code: "TEST500", message: "다시 시도")) {
+            try await saver.update(draft, target: .routine(id: id))
+        }
+        try await saver.update(draft, target: .routine(id: id))
+        try await saver.update(draft, target: .participation(routineID: id, participantID: id))
+        #expect(uploads == 1)
+        #expect(savedPaths == ["/api/routines/\(id)", "/api/routines/\(id)", "/api/routines/\(id)/participation-results/\(id)"])
+    }
+
+    @Test func detailOnlyEnablesEditingForTheOwner() {
+        let owner = RoutineOwnerEntity(id: id, nickname: "작성자", profileImageURL: nil)
+        let detail = RoutineDetailEntity(
+            id: id, title: "서버 루틴", content: nil, owner: owner, cards: nil,
+            likeCount: nil, commentCount: nil, createdAt: nil, updatedAt: nil)
+        let interactions = RoutineInteractions(
+            likeCount: 0, likedByMe: false, inProgressCount: 0, completedCount: 0, participation: .completed)
+        for resultID in [nil, id] {
+            for userID in [id, "another-user"] {
+                let reducer = RoutineDetailReducer(id: id, userID: userID, resultParticipantID: resultID)
+                var state = RoutineDetailReducer.State(title: "상세")
+                state.isParticipationResult = resultID != nil
+                #expect(!state.canEdit)
+                _ = reducer.reduce(&state, with: .loaded(detail, [], interactions))
+                #expect(state.canEdit == (userID == id))
+                state.isBusy = true
+                #expect(!state.canEdit)
+            }
+        }
+    }
+
+    @Test func relatedScreenLoadsEmptyStateAndRetriesAfterFailure() async throws {
+        var attempts = 0
+        let manager = network { request in
+            #expect(request.url?.path == "/api/routines/\(id)/participation-results")
+            attempts += 1
+            if attempts == 1 {
+                return (500, Data(#"{"isSuccess":false,"code":"TEST500","message":"다시 시도"}"#.utf8))
+            }
+            return (200, Data(#"{"isSuccess":true,"result":{"results":[],"totalCount":0}}"#.utf8))
+        }
+        let repository = RoutineRepositoryImpl(networkManager: manager)
+        let store = Store(state: .loading, reducer: RoutineRelatedLoader {
+            try await repository.participationResults(routineID: id)
+        })
+        store.send(.load)
+        try await waitUntil { store.state == .failed("다시 시도") }
+        store.send(.load)
+        try await waitUntil { store.state == .loaded(.init(results: [], totalCount: 0)) }
     }
 
     @Test func profilePatchDistinguishesOmissionNullAndValue() throws {

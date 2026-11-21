@@ -18,11 +18,29 @@ final class RoutineDraftSaver {
 
     func saveParticipation(_ draft: RoutineDraft, routineID: String, expectedSteps: Int) async throws -> RoutineInteractions {
         guard draft.steps.count == expectedSteps, !draft.steps.isEmpty,
-              draft.steps.allSatisfy({ !$0.image.data.isEmpty }) else {
+              draft.steps.allSatisfy({ step in
+                  if case let .local(image) = step.photo { return !image.data.isEmpty }
+                  return false
+              }) else {
             throw DataContractError.invalidValue("participation.cards")
         }
         let input = try await input(draft)
         return try await routines.completeParticipation(id: routineID, input: input)
+    }
+
+    enum EditTarget {
+        case routine(id: String)
+        case participation(routineID: String, participantID: String)
+    }
+
+    func update(_ draft: RoutineDraft, target: EditTarget) async throws {
+        let input = try await input(draft)
+        switch target {
+        case let .routine(id):
+            _ = try await routines.update(id: id, input: input)
+        case let .participation(routineID, participantID):
+            _ = try await routines.updateParticipationResult(routineID: routineID, participantID: participantID, input: input)
+        }
     }
 
     private func input(_ draft: RoutineDraft) async throws -> RoutineSaveInput {
@@ -30,14 +48,20 @@ final class RoutineDraftSaver {
         for step in draft.steps {
             try Task.checkCancellation()
             let id: String
-            if let uploadedID = uploadedIDs[step.image.id] {
-                id = uploadedID
-            } else {
-                let image = try await images.upload(
-                    input: .init(
-                        data: step.image.data, fileName: "card.jpg", mimeType: "image/jpeg"))
-                id = image.id
-                uploadedIDs[step.image.id] = id
+            switch step.photo {
+            case let .stored(imageID, _):
+                id = imageID
+            case let .local(photo):
+                if let uploadedID = uploadedIDs[photo.id] {
+                    id = uploadedID
+                } else {
+                    let image = try await images.uploadStep(
+                        input: .init(data: photo.data, fileName: "card.jpg", mimeType: "image/jpeg"))
+                    id = image.id
+                    uploadedIDs[photo.id] = id
+                }
+            case .reference:
+                throw DataContractError.invalidValue("card.imageId")
             }
             cards.append(.init(imageID: id, title: step.title, content: step.content, time: step.time.formatted))
         }

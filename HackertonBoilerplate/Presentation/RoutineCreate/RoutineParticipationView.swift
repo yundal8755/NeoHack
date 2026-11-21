@@ -24,15 +24,11 @@ struct RoutineParticipationView: View {
         self.onCancel = onCancel
         expectedSteps = steps.count
         _hasJoined = State(initialValue: participation == .joined)
-        // shortcut: 작성 초안은 이 화면에서만 유지한다. 재진입 복원이 필요하면 서버 draft API를 연결한다.
         let forms = steps.map { reference in
             let parts = reference.time.split(separator: ":").compactMap { Int($0) }
-            var step = RoutineCreateReducer.Step(
-                image: RoutineImage(data: Data()),
+            return RoutineCreateReducer.Step(
+                photo: .reference(reference.imageURL),
                 time: TimeOfDay(hour: parts.first ?? 0, minute: parts.dropFirst().first ?? 0))
-            step.referenceImageURL = reference.imageURL
-            step.requiresImageUpload = true
-            return step
         }
         _store = StateObject(wrappedValue: StoreOf<RoutineCreateReducer>(
             state: .init(steps: forms), reducer: RoutineCreateReducer()))

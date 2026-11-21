@@ -10,12 +10,16 @@ struct RoutineDetailDestination: View {
     private let routineID: String?
     private let onParticipationCompleted: () -> Void
     private let onDelete: () -> Void
+    private let resultParticipantID: String?
+    private let onUpdated: () -> Void
 
-    init(id: String, session: ProfileSession, resultParticipantID: String? = nil, onParticipationCompleted: @escaping () -> Void = {}, onBack: @escaping () -> Void, onDelete: @escaping () -> Void) {
+    init(id: String, session: ProfileSession, resultParticipantID: String? = nil, onParticipationCompleted: @escaping () -> Void = {}, onUpdated: @escaping () -> Void = {}, onBack: @escaping () -> Void, onDelete: @escaping () -> Void) {
         var state = RoutineDetailReducer.State(title: "루틴 상세")
         state.isLive = true
         state.isParticipationResult = resultParticipantID != nil
         self.session = session
+        self.resultParticipantID = resultParticipantID
+        self.onUpdated = onUpdated
         routineID = id
         self.onParticipationCompleted = onParticipationCompleted
         _store = StateObject(
@@ -33,9 +37,12 @@ struct RoutineDetailDestination: View {
         self.onBack = onBack
         onDelete = {}
         session = nil
+        resultParticipantID = nil
+        onUpdated = {}
         routineID = nil
         onParticipationCompleted = {}
     }
 
-    var body: some View { RoutineDetailView(store: store, session: session, routineID: routineID, onParticipationCompleted: onParticipationCompleted, onBack: onBack, onDelete: onDelete) }
+    var body: some View { RoutineDetailView(store: store, session: session, routineID: routineID, resultParticipantID: resultParticipantID,
+            onParticipationCompleted: onParticipationCompleted, onUpdated: onUpdated, onBack: onBack, onDelete: onDelete) }
 }

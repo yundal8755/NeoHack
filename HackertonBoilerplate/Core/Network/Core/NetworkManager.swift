@@ -3,8 +3,10 @@ import Foundation
 
 final class NetworkManager {
     private let authInterceptor: AuthInterceptor?
+    private let session: Session
 
-    init(authInterceptor: AuthInterceptor? = nil) {
+    init(authInterceptor: AuthInterceptor? = nil, session: Session = .default) {
+        self.session = session
         self.authInterceptor = authInterceptor
     }
 
@@ -21,6 +23,22 @@ final class NetworkManager {
     ) async throws(NetworkError) -> Data {
         try await requestData(target, maxResponseBytes: maxResponseBytes, allowsTokenRefresh: true)
     }
+
+    func upload<T: Decodable, R: TargetType>(
+        _ target: R, file: Data, fileName: String, mimeType: String, as dto: T.Type
+    ) async throws(NetworkError) -> T {
+        var request = try makeRequest(for: target)
+        // Alamofire가 boundary를 포함한 Content-Type을 설정한다.
+        request.setValue(nil, forHTTPHeaderField: "Content-Type")
+        let response = await session.upload(multipartFormData: { form in
+            form.append(file, withName: "file", fileName: fileName, mimeType: mimeType)
+        }, with: request)
+            .validate(statusCode: 200..<300)
+            .serializingDecodable(dto, decoder: CodableManager.shared.responseDecoder)
+            .response
+        return try parseResponse(response)
+    }
+
 }
 
 private extension NetworkManager {
@@ -103,14 +121,14 @@ private extension NetworkManager {
         dtoType: T.Type,
         request: URLRequest
     ) async -> DataResponse<T, AFError> {
-        await AF.request(request)
+        await session.request(request)
             .validate(statusCode: 200..<300)
             .serializingDecodable(dtoType, decoder: CodableManager.shared.responseDecoder)
             .response
     }
 
     func performDataRequest(request: URLRequest) async -> DataResponse<Data, AFError> {
-        await AF.request(request)
+        await session.request(request)
             .validate(statusCode: 200..<300)
             .serializingData()
             .response

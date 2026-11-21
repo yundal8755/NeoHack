@@ -6,7 +6,7 @@ MVI의 세 부분을 나눠 검증한다. State 전이와 Effect는 로컬 패�
 
 | 계층 | 검증 대상 | 도구 | 위치 | 실행 |
 | --- | --- | --- | --- | --- |
-| 순수 로직 | Mapper, Entity 계산, 입력 검증 | Swift Testing, `@Test(arguments:)` | `Packages/HackertonCore/Tests` | `scripts/test.sh` |
+| 새 Data·Domain | DTO, Mapper, Entity, Endpoint, Repository·multipart·오류 | Swift Testing + URLProtocol | `HackertonBoilerplateSnapshotTests/DataDomain` | `scripts/test.sh app -only-testing:HackertonBoilerplateSnapshotTests/DataDomainTests` |
 | Reducer State 전이 | `reduce(&state, action)` 후의 State | Swift Testing | `Packages/HackertonCore/Tests` | `scripts/test.sh` |
 | Reducer Effect | Effect → Mock Repository → 되돌아오는 Action | Swift Testing + `ReducerTester` | `Packages/HackertonCore/Tests` | `scripts/test.sh` |
 | 화면 렌더링 | State별 화면, 공통 컴포넌트 | swift-snapshot-testing | `HackertonBoilerplateSnapshotTests` | `scripts/test.sh app` |
@@ -19,9 +19,8 @@ Packages/HackertonCore/
   Sources/
     MVICore/                  Reducer, Effect, Store
     HackertonCore/
-      Entity/<Feature>/       앱 모델
-      Domain/                 <Feature>Repository 프로토콜, TokenStoring
-      DataModel/<Feature>/    DTO, Mapper
+      Domain/                 기존 TokenStoring
+      DataModel/Example/      기존 Example DTO (새 서비스 범위 제외)
       Feature/<Feature>/      <Feature>Reducer (State, Action 내부 정의)
       App/                    AppLaunchConfiguration (목 모드 실행 인자)
       AccessibilityID.swift   View와 UI 테스트가 함께 쓰는 식별자
@@ -31,8 +30,12 @@ Packages/HackertonCore/
     MVICoreTests/
     HackertonCoreTests/<Feature>/
 
-HackertonBoilerplate/                  View, Endpoint, Repository 구현체(Alamofire, Supabase 등), AppContainer
+HackertonBoilerplate/
+  Domain/<DomainName>/                Entity, Input, Repository protocol
+  Data/<DomainName>/                  DTO/Request, DTO/Response, Mapper, Endpoint, RepositoryImpl
+  App/, Core/, Presentation/         기존 앱 기반·화면
 HackertonBoilerplateSnapshotTests/     스냅샷 테스트와 __Snapshots__ 기준 이미지
+  DataDomain/                          앱 Data·Domain의 Swift Testing (스냅샷 아님)
 HackertonBoilerplateUITests/
   Screens/                             화면 조작 객체
   Flows/                               흐름 테스트
@@ -42,23 +45,7 @@ HackertonBoilerplateUITests/
 
 ## Reducer 테스트
 
-의존성은 Reducer의 init으로 받는다. Mock Repository는 클로저로 응답을 바꿔 끼운다.
-
-```swift
-// Sources/HackertonCore/Domain/AuthRepository.swift
-public protocol AuthRepository: Sendable {
-    func login(email: String) async throws -> User
-}
-
-// Sources/HackertonMocks/MockAuthRepository.swift
-public struct MockAuthRepository: AuthRepository {
-    public var login: @Sendable (String) async throws -> User
-    public init(login: @escaping @Sendable (String) async throws -> User = { _ in .fixture }) {
-        self.login = login
-    }
-    public func login(email: String) async throws -> User { try await login(email) }
-}
-```
+의존성은 Reducer의 init으로 받는다. 기존 패키지의 테스트 대역은 HackertonMocks를 사용한다. 새 앱 Domain의 Repository는 패키지 Reducer가 import할 수 없으므로 실제 연동 시 Reducer 위치 또는 Domain 모듈 분리를 먼저 결정한다. 현재 화면에는 연결하지 않는다.
 
 State 전이는 `reduce`를 직접 호출하고, 경계값은 파라미터 테스트로 한 번에 확인한다. 네트워크가 끼면 안 되는 테스트에는 `unimplemented`를 넣는다. 호출되면 테스트가 실패한다.
 
@@ -111,7 +98,8 @@ func 로그인_성공시_유저가_저장된다() async {
 ## 실행
 
 ```bash
-scripts/test.sh            # 패키지 테스트
+scripts/test.sh core --scratch-path /tmp/NeoHack-core-tests  # 패키지 테스트; 추적 중인 기존 .build 보호
+scripts/test.sh app -only-testing:HackertonBoilerplateSnapshotTests/DataDomainTests  # 새 계층만
 scripts/test.sh app        # 스냅샷 + UI 테스트
 scripts/test.sh all        # 전체
 ```
@@ -136,3 +124,5 @@ git config core.hooksPath .githooks
 
 - 열린 Xcode가 이전 스킴으로 파일을 덮어써 테스트 대상이 사라지는 일을 막기 위한 검사다. 막히면 Xcode를 종료하고 `git restore --staged --worktree <스킴 경로>`로 되돌린다.
 - 테스트 타깃을 추가·삭제하면 `.githooks/pre-commit`의 `REQUIRED_TESTABLES`도 함께 고친다.
+
+DataDomain 테스트는 URLProtocol과 주입한 Alamofire Session을 사용하여 실서버에 접속하지 않는다. Snapshot·UI 테스트와 별도로 실행하며 기준 이미지를 기록하지 않는다. 기본 iOS 26.2 런타임이 없으면 TEST_DESTINATION에 설치된 시뮬레이터를 지정한다.

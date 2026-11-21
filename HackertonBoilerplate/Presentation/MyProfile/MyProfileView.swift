@@ -125,10 +125,10 @@ struct MyProfileView: View {
         .onChange(of: deletedRoutineID) { _, id in
             if let id { mine.send(.removed(id)) }
         }
-        .sheet(
+        .navigationDestination(
             isPresented: Binding(
                 get: { store.state.edit != nil },
-                set: { if !$0 { store.send(.closeEditor) } }
+                set: { if !$0 { store.send(.editorDismissed) } }
             )
         ) {
             ProfileEditView(store: store, imageURL: session?.profileImageURL)

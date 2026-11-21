@@ -10,5 +10,9 @@ nonisolated struct RoutineSummaryEntity: Equatable, Sendable {
     let likeCount: Int64?
     let participantCount: Int64?
     let createdAt: Date?
+    var likedByMe: Bool? = nil
+    var inProgressCount: Int64? = nil
+    var completedCount: Int64? = nil
+    var commentCount: Int64? = nil
     var participation: RoutineInteractions.Participation? = nil
 }

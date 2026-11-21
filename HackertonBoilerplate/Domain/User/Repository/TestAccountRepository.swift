@@ -5,6 +5,7 @@ nonisolated struct TestAccount: Equatable, Identifiable, Sendable {
     let slot: Int
     let nickname: String
     let available: Bool
+    var profileImageID: String? = nil
 }
 
 nonisolated struct TestAccountLease: Equatable, Sendable {
@@ -14,6 +15,7 @@ nonisolated struct TestAccountLease: Equatable, Sendable {
 }
 
 nonisolated protocol TestAccountRepository {
+    func register(_ input: TestAccountRegistration) async throws -> TestAccount
     func list() async throws -> [TestAccount]
     func claim(accountID: String) async throws -> TestAccountLease
     func heartbeat(_ lease: TestAccountLease) async throws -> Date

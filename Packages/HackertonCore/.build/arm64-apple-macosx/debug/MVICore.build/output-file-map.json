@@ -1,0 +1,40 @@
+{
+  "": {
+    "swift-dependencies": "/Users/mac/Documents/iOS_projects/SwiftUI/Hacker11th/Packages/HackertonCore/.build/arm64-apple-macosx/debug/MVICore.build/master.swiftdeps"
+  },
+  "/Users/mac/Documents/iOS_projects/SwiftUI/Hacker11th/Packages/HackertonCore/Sources/MVICore/AnyValueActor.swift": {
+    "dependencies": "/Users/mac/Documents/iOS_projects/SwiftUI/Hacker11th/Packages/HackertonCore/.build/arm64-apple-macosx/debug/MVICore.build/AnyValueActor.d",
+    "object": "/Users/mac/Documents/iOS_projects/SwiftUI/Hacker11th/Packages/HackertonCore/.build/arm64-apple-macosx/debug/MVICore.build/AnyValueActor.swift.o",
+    "swiftmodule": "/Users/mac/Documents/iOS_projects/SwiftUI/Hacker11th/Packages/HackertonCore/.build/arm64-apple-macosx/debug/MVICore.build/AnyValueActor~partial.swiftmodule",
+    "swift-dependencies": "/Users/mac/Documents/iOS_projects/SwiftUI/Hacker11th/Packages/HackertonCore/.build/arm64-apple-macosx/debug/MVICore.build/AnyValueActor.swiftdeps",
+    "diagnostics": "/Users/mac/Documents/iOS_projects/SwiftUI/Hacker11th/Packages/HackertonCore/.build/arm64-apple-macosx/debug/MVICore.build/AnyValueActor.dia"
+  },
+  "/Users/mac/Documents/iOS_projects/SwiftUI/Hacker11th/Packages/HackertonCore/Sources/MVICore/Effect.swift": {
+    "dependencies": "/Users/mac/Documents/iOS_projects/SwiftUI/Hacker11th/Packages/HackertonCore/.build/arm64-apple-macosx/debug/MVICore.build/Effect.d",
+    "object": "/Users/mac/Documents/iOS_projects/SwiftUI/Hacker11th/Packages/HackertonCore/.build/arm64-apple-macosx/debug/MVICore.build/Effect.swift.o",
+    "swiftmodule": "/Users/mac/Documents/iOS_projects/SwiftUI/Hacker11th/Packages/HackertonCore/.build/arm64-apple-macosx/debug/MVICore.build/Effect~partial.swiftmodule",
+    "swift-dependencies": "/Users/mac/Documents/iOS_projects/SwiftUI/Hacker11th/Packages/HackertonCore/.build/arm64-apple-macosx/debug/MVICore.build/Effect.swiftdeps",
+    "diagnostics": "/Users/mac/Documents/iOS_projects/SwiftUI/Hacker11th/Packages/HackertonCore/.build/arm64-apple-macosx/debug/MVICore.build/Effect.dia"
+  },
+  "/Users/mac/Documents/iOS_projects/SwiftUI/Hacker11th/Packages/HackertonCore/Sources/MVICore/Reducer.swift": {
+    "dependencies": "/Users/mac/Documents/iOS_projects/SwiftUI/Hacker11th/Packages/HackertonCore/.build/arm64-apple-macosx/debug/MVICore.build/Reducer.d",
+    "object": "/Users/mac/Documents/iOS_projects/SwiftUI/Hacker11th/Packages/HackertonCore/.build/arm64-apple-macosx/debug/MVICore.build/Reducer.swift.o",
+    "swiftmodule": "/Users/mac/Documents/iOS_projects/SwiftUI/Hacker11th/Packages/HackertonCore/.build/arm64-apple-macosx/debug/MVICore.build/Reducer~partial.swiftmodule",
+    "swift-dependencies": "/Users/mac/Documents/iOS_projects/SwiftUI/Hacker11th/Packages/HackertonCore/.build/arm64-apple-macosx/debug/MVICore.build/Reducer.swiftdeps",
+    "diagnostics": "/Users/mac/Documents/iOS_projects/SwiftUI/Hacker11th/Packages/HackertonCore/.build/arm64-apple-macosx/debug/MVICore.build/Reducer.dia"
+  },
+  "/Users/mac/Documents/iOS_projects/SwiftUI/Hacker11th/Packages/HackertonCore/Sources/MVICore/Store.swift": {
+    "dependencies": "/Users/mac/Documents/iOS_projects/SwiftUI/Hacker11th/Packages/HackertonCore/.build/arm64-apple-macosx/debug/MVICore.build/Store.d",
+    "object": "/Users/mac/Documents/iOS_projects/SwiftUI/Hacker11th/Packages/HackertonCore/.build/arm64-apple-macosx/debug/MVICore.build/Store.swift.o",
+    "swiftmodule": "/Users/mac/Documents/iOS_projects/SwiftUI/Hacker11th/Packages/HackertonCore/.build/arm64-apple-macosx/debug/MVICore.build/Store~partial.swiftmodule",
+    "swift-dependencies": "/Users/mac/Documents/iOS_projects/SwiftUI/Hacker11th/Packages/HackertonCore/.build/arm64-apple-macosx/debug/MVICore.build/Store.swiftdeps",
+    "diagnostics": "/Users/mac/Documents/iOS_projects/SwiftUI/Hacker11th/Packages/HackertonCore/.build/arm64-apple-macosx/debug/MVICore.build/Store.dia"
+  },
+  "/Users/mac/Documents/iOS_projects/SwiftUI/Hacker11th/Packages/HackertonCore/Sources/MVICore/_CancelID.swift": {
+    "dependencies": "/Users/mac/Documents/iOS_projects/SwiftUI/Hacker11th/Packages/HackertonCore/.build/arm64-apple-macosx/debug/MVICore.build/_CancelID.d",
+    "object": "/Users/mac/Documents/iOS_projects/SwiftUI/Hacker11th/Packages/HackertonCore/.build/arm64-apple-macosx/debug/MVICore.build/_CancelID.swift.o",
+    "swiftmodule": "/Users/mac/Documents/iOS_projects/SwiftUI/Hacker11th/Packages/HackertonCore/.build/arm64-apple-macosx/debug/MVICore.build/_CancelID~partial.swiftmodule",
+    "swift-dependencies": "/Users/mac/Documents/iOS_projects/SwiftUI/Hacker11th/Packages/HackertonCore/.build/arm64-apple-macosx/debug/MVICore.build/_CancelID.swiftdeps",
+    "diagnostics": "/Users/mac/Documents/iOS_projects/SwiftUI/Hacker11th/Packages/HackertonCore/.build/arm64-apple-macosx/debug/MVICore.build/_CancelID.dia"
+  }
+}

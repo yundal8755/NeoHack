@@ -2,6 +2,7 @@
 
 - 역할과 책임은 `Docs/IOSDeveloperHandoff.md`를 따른다. UI 개발 2명, 서버 연결·테스트·기타 작업 1명이며 담당자는 미정이다. 디자인시스템 컴포넌트 제작은 공통 책임이다.
 - UI 담당은 Figma 구현과 Entity의 화면 연결을 맡고, 서버 연결 담당은 Data layer 전체와 Entity 구성·서버 연동·테스트를 맡는다.
+- `dev` 반영은 PR 작성이나 팀원 리뷰·승인을 필수 단계로 요구하지 않는다. 개인 작업 브랜치의 변경을 로컬에서 `dev`에 병합한 뒤 원격 `dev`로 직접 push하는 방식을 사용한다.
 - 화면 상태가 필요한 기능은 기존 MVI 코어를 사용한다. View와 Reducer를 기본으로 두고 State와 Action은 Reducer 내부에 정의한다.
 - API 연동은 `Docs/CleanArchitecture.md`를 따른다. `Data/<Feature>`의 Endpoint와 Repository가 요청하고, DTO를 Mapper로 `Entity/<Feature>`의 모델로 변환한 뒤 화면에 전달한다. 서비스별 코드는 실제 기능을 구현할 때 추가한다.
 - Figma 구현 요청은 프레임별 Dev Mode 링크의 fileKey와 node-id를 사용한다. 브랜치 링크는 브랜치 키를 사용하며 페이지 링크만 있으면 메타데이터에서 대상 프레임을 찾는다. 대상이 모호하거나 접근이 막히면 프레임 링크 또는 접근 권한을 요청한다.

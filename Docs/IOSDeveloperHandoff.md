@@ -2,6 +2,22 @@
 
 담당자는 미정입니다. 아래는 인원 구성과 역할별 책임이며, 특정 팀원에게 배정한 내용이 아닙니다.
 
+## dev 반영 방식
+
+- 개인 작업 브랜치에서 작업하고 커밋·push합니다.
+- `dev` 반영 시 PR 작성, 팀원 코드 리뷰, 승인 대기를 필수로 하지 않습니다.
+- 작업자가 최신 원격 `dev`를 로컬에 가져와 개인 작업 브랜치를 병합하고 원격 `dev`로 직접 push합니다.
+- 개인 브랜치에 push하는 것과 `dev`에 반영하는 것은 별도 작업입니다. 아래 명령의 `feature/my-work`는 본인의 실제 작업 브랜치명으로 바꿉니다.
+
+```bash
+git switch dev
+git pull --ff-only origin dev
+git merge feature/my-work
+git push origin dev
+```
+
+충돌이 발생하면 작업자가 해결하고 병합을 완료한 뒤 push합니다.
+
 ## 역할별 책임
 
 | 역할 | 인원 | 책임 |

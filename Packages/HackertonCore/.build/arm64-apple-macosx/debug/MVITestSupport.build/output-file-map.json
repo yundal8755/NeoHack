@@ -1,0 +1,19 @@
+{
+  "": {
+    "swift-dependencies": "/Users/mac/Documents/iOS_projects/SwiftUI/Hacker11th/Packages/HackertonCore/.build/arm64-apple-macosx/debug/MVITestSupport.build/master.swiftdeps"
+  },
+  "/Users/mac/Documents/iOS_projects/SwiftUI/Hacker11th/Packages/HackertonCore/Sources/MVITestSupport/ReducerTester.swift": {
+    "dependencies": "/Users/mac/Documents/iOS_projects/SwiftUI/Hacker11th/Packages/HackertonCore/.build/arm64-apple-macosx/debug/MVITestSupport.build/ReducerTester.d",
+    "object": "/Users/mac/Documents/iOS_projects/SwiftUI/Hacker11th/Packages/HackertonCore/.build/arm64-apple-macosx/debug/MVITestSupport.build/ReducerTester.swift.o",
+    "swiftmodule": "/Users/mac/Documents/iOS_projects/SwiftUI/Hacker11th/Packages/HackertonCore/.build/arm64-apple-macosx/debug/MVITestSupport.build/ReducerTester~partial.swiftmodule",
+    "swift-dependencies": "/Users/mac/Documents/iOS_projects/SwiftUI/Hacker11th/Packages/HackertonCore/.build/arm64-apple-macosx/debug/MVITestSupport.build/ReducerTester.swiftdeps",
+    "diagnostics": "/Users/mac/Documents/iOS_projects/SwiftUI/Hacker11th/Packages/HackertonCore/.build/arm64-apple-macosx/debug/MVITestSupport.build/ReducerTester.dia"
+  },
+  "/Users/mac/Documents/iOS_projects/SwiftUI/Hacker11th/Packages/HackertonCore/Sources/MVITestSupport/Unimplemented.swift": {
+    "dependencies": "/Users/mac/Documents/iOS_projects/SwiftUI/Hacker11th/Packages/HackertonCore/.build/arm64-apple-macosx/debug/MVITestSupport.build/Unimplemented.d",
+    "object": "/Users/mac/Documents/iOS_projects/SwiftUI/Hacker11th/Packages/HackertonCore/.build/arm64-apple-macosx/debug/MVITestSupport.build/Unimplemented.swift.o",
+    "swiftmodule": "/Users/mac/Documents/iOS_projects/SwiftUI/Hacker11th/Packages/HackertonCore/.build/arm64-apple-macosx/debug/MVITestSupport.build/Unimplemented~partial.swiftmodule",
+    "swift-dependencies": "/Users/mac/Documents/iOS_projects/SwiftUI/Hacker11th/Packages/HackertonCore/.build/arm64-apple-macosx/debug/MVITestSupport.build/Unimplemented.swiftdeps",
+    "diagnostics": "/Users/mac/Documents/iOS_projects/SwiftUI/Hacker11th/Packages/HackertonCore/.build/arm64-apple-macosx/debug/MVITestSupport.build/Unimplemented.dia"
+  }
+}

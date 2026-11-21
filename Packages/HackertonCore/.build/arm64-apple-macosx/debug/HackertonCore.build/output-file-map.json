@@ -1,0 +1,26 @@
+{
+  "": {
+    "swift-dependencies": "/Users/mac/Documents/iOS_projects/SwiftUI/Hacker11th/Packages/HackertonCore/.build/arm64-apple-macosx/debug/HackertonCore.build/master.swiftdeps"
+  },
+  "/Users/mac/Documents/iOS_projects/SwiftUI/Hacker11th/Packages/HackertonCore/Sources/HackertonCore/AccessibilityID.swift": {
+    "dependencies": "/Users/mac/Documents/iOS_projects/SwiftUI/Hacker11th/Packages/HackertonCore/.build/arm64-apple-macosx/debug/HackertonCore.build/AccessibilityID.d",
+    "object": "/Users/mac/Documents/iOS_projects/SwiftUI/Hacker11th/Packages/HackertonCore/.build/arm64-apple-macosx/debug/HackertonCore.build/AccessibilityID.swift.o",
+    "swiftmodule": "/Users/mac/Documents/iOS_projects/SwiftUI/Hacker11th/Packages/HackertonCore/.build/arm64-apple-macosx/debug/HackertonCore.build/AccessibilityID~partial.swiftmodule",
+    "swift-dependencies": "/Users/mac/Documents/iOS_projects/SwiftUI/Hacker11th/Packages/HackertonCore/.build/arm64-apple-macosx/debug/HackertonCore.build/AccessibilityID.swiftdeps",
+    "diagnostics": "/Users/mac/Documents/iOS_projects/SwiftUI/Hacker11th/Packages/HackertonCore/.build/arm64-apple-macosx/debug/HackertonCore.build/AccessibilityID.dia"
+  },
+  "/Users/mac/Documents/iOS_projects/SwiftUI/Hacker11th/Packages/HackertonCore/Sources/HackertonCore/App/AppLaunchConfiguration.swift": {
+    "dependencies": "/Users/mac/Documents/iOS_projects/SwiftUI/Hacker11th/Packages/HackertonCore/.build/arm64-apple-macosx/debug/HackertonCore.build/AppLaunchConfiguration.d",
+    "object": "/Users/mac/Documents/iOS_projects/SwiftUI/Hacker11th/Packages/HackertonCore/.build/arm64-apple-macosx/debug/HackertonCore.build/AppLaunchConfiguration.swift.o",
+    "swiftmodule": "/Users/mac/Documents/iOS_projects/SwiftUI/Hacker11th/Packages/HackertonCore/.build/arm64-apple-macosx/debug/HackertonCore.build/AppLaunchConfiguration~partial.swiftmodule",
+    "swift-dependencies": "/Users/mac/Documents/iOS_projects/SwiftUI/Hacker11th/Packages/HackertonCore/.build/arm64-apple-macosx/debug/HackertonCore.build/AppLaunchConfiguration.swiftdeps",
+    "diagnostics": "/Users/mac/Documents/iOS_projects/SwiftUI/Hacker11th/Packages/HackertonCore/.build/arm64-apple-macosx/debug/HackertonCore.build/AppLaunchConfiguration.dia"
+  },
+  "/Users/mac/Documents/iOS_projects/SwiftUI/Hacker11th/Packages/HackertonCore/Sources/HackertonCore/Domain/TokenStoring.swift": {
+    "dependencies": "/Users/mac/Documents/iOS_projects/SwiftUI/Hacker11th/Packages/HackertonCore/.build/arm64-apple-macosx/debug/HackertonCore.build/TokenStoring.d",
+    "object": "/Users/mac/Documents/iOS_projects/SwiftUI/Hacker11th/Packages/HackertonCore/.build/arm64-apple-macosx/debug/HackertonCore.build/TokenStoring.swift.o",
+    "swiftmodule": "/Users/mac/Documents/iOS_projects/SwiftUI/Hacker11th/Packages/HackertonCore/.build/arm64-apple-macosx/debug/HackertonCore.build/TokenStoring~partial.swiftmodule",
+    "swift-dependencies": "/Users/mac/Documents/iOS_projects/SwiftUI/Hacker11th/Packages/HackertonCore/.build/arm64-apple-macosx/debug/HackertonCore.build/TokenStoring.swiftdeps",
+    "diagnostics": "/Users/mac/Documents/iOS_projects/SwiftUI/Hacker11th/Packages/HackertonCore/.build/arm64-apple-macosx/debug/HackertonCore.build/TokenStoring.dia"
+  }
+}

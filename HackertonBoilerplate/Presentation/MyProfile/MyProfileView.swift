@@ -6,55 +6,53 @@ import SwiftUI
 struct MyProfileView: View {
     @ObservedObject private var store: StoreOf<MyProfileReducer>
     private let onBack: () -> Void
-    @State private var navigationPath: [Int] = []
+    private let onRoutineSelected: (Int) -> Void
     @State private var feedbackID = UUID()
 
-    init(store: StoreOf<MyProfileReducer>, onBack: @escaping () -> Void) {
+    init(store: StoreOf<MyProfileReducer>, onRoutineSelected: @escaping (Int) -> Void = { _ in }, onBack: @escaping () -> Void) {
+        self.onRoutineSelected = onRoutineSelected
         self.store = store
         self.onBack = onBack
     }
 
     var body: some View {
-        NavigationStack(path: $navigationPath) {
-            VStack(spacing: 0) {
-                AppTopBar("마이", leading: .asset("CaretLeft", label: "뒤로가기", action: onBack))
-                ScrollView {
-                    VStack(alignment: .leading, spacing: 0) {
-                        profileHeader
-                        HStack(spacing: AppSpacing.sm) {
-                            tab("내 루틴 (\(store.state.myRoutines.count))", selection: .mine, id: AccessibilityID.MyProfile.myRoutinesTab)
-                            tab("참여 루틴 (\(store.state.participatingRoutines.count))", selection: .participating, id: AccessibilityID.MyProfile.participatingTab)
-                        }
-                        .padding(.vertical, AppSpacing.xs)
+        VStack(spacing: 0) {
+            AppTopBar("마이", leading: .asset("CaretLeft", label: "홈으로 돌아가기") {
+                onBack()
+            })
+            ScrollView {
+                VStack(alignment: .leading, spacing: 0) {
+                    profileHeader
+                    HStack(spacing: AppSpacing.sm) {
+                        tab("내 루틴 (\(store.state.myRoutines.count))", selection: .mine, id: AccessibilityID.MyProfile.myRoutinesTab)
+                        tab("참여 루틴 (\(store.state.participatingRoutines.count))", selection: .participating, id: AccessibilityID.MyProfile.participatingTab)
+                    }
+                    .padding(.vertical, AppSpacing.xs)
 
-                        LazyVStack(spacing: 0) {
-                            if store.state.visibleRoutines.isEmpty {
-                                EmptyView(
-                                    title: store.state.selectedTab == .mine ? "작성한 루틴이 없어요" : "참여한 루틴이 없어요",
-                                    message: "홈에서 새로운 루틴을 만나보세요."
-                                )
-                                .padding(.vertical, AppSpacing.md)
+                    LazyVStack(spacing: 0) {
+                        if store.state.visibleRoutines.isEmpty {
+                            EmptyView(
+                                title: store.state.selectedTab == .mine ? "작성한 루틴이 없어요" : "참여한 루틴이 없어요",
+                                message: "홈에서 새로운 루틴을 만나보세요."
+                            )
+                            .padding(.vertical, AppSpacing.md)
+                        }
+                        ForEach(store.state.visibleRoutines) { routine in
+                            Button {
+                                onRoutineSelected(routine.id)
+                            } label: {
+                                RoutineListRow(routine: routine, showsParticipation: store.state.selectedTab == .participating)
                             }
-                            ForEach(store.state.visibleRoutines) { routine in
-                                Button { navigationPath.append(routine.id) } label: {
-                                    RoutineListRow(routine: routine, showsParticipation: store.state.selectedTab == .participating)
-                                }
-                                .buttonStyle(.plain)
-                                .accessibilityIdentifier("myProfile.routine.\(routine.id)")
-                            }
+                            .buttonStyle(.plain)
+                            .accessibilityIdentifier("myProfile.routine.\(routine.id)")
                         }
                     }
-                    .padding(.horizontal, AppSpacing.md)
                 }
-            }
-            .background(AppColor.background)
-            .toolbar(.hidden, for: .navigationBar)
-            .navigationDestination(for: Int.self) { id in
-                if let routine = (store.state.myRoutines + store.state.participatingRoutines).first(where: { $0.id == id }) {
-                    RoutineDetailDestination(state: routine.detail)
-                }
+                .padding(.horizontal, AppSpacing.md)
             }
         }
+        .background(AppColor.background)
+        .toolbar(.hidden, for: .navigationBar)
         .accessibilityIdentifier(AccessibilityID.MyProfile.screen)
         .feedbackPopup(Binding(
             get: { store.state.notice.map { FeedbackMessage(id: feedbackID, kind: .info, title: "안내", message: $0) } },

@@ -50,7 +50,6 @@ public struct RoutineDetailReducer: Reducer {
         public var editingCommentID: Int?
         public var participation = Participation.notJoined
         public var isOwner = false
-        public var isDeleted = false
 
         public init(
             title: String,
@@ -85,12 +84,10 @@ public struct RoutineDetailReducer: Reducer {
         case editComment(Int)
         case cancelEditing
         case deleteComment(Int)
-        case deleteRoutine
         case commentChanged(String)
         case submitCommentTapped
         case likeTapped
         case participateTapped
-        case moreTapped
         case noticeDismissed
     }
 
@@ -150,11 +147,6 @@ public struct RoutineDetailReducer: Reducer {
                 state.editingCommentID = nil
                 state.commentDraft = ""
             }
-        case .deleteRoutine:
-            guard state.isOwner else { break }
-            state.isDeleted = true
-        case .moreTapped:
-            state.notice = "루틴 관리 메뉴는 기능 명세 확정 후 연결할 예정이에요."
         case .noticeDismissed:
             state.notice = nil
         }

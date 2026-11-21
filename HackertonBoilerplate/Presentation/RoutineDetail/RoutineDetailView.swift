@@ -5,15 +5,15 @@ import SwiftUI
 
 struct RoutineDetailView: View {
     @ObservedObject private var store: StoreOf<RoutineDetailReducer>
+    private let onBack: (() -> Void)?
     @State private var deletingCommentID: Int?
-    @State private var isDeleteRoutinePresented = false
-    @State private var isRoutineMenuPresented = false
     @State private var isCommentsPresented = false
     @State private var feedbackID = UUID()
     @Environment(\.dismiss) private var dismiss
     @FocusState private var isCommentFocused: Bool
 
-    init(store: StoreOf<RoutineDetailReducer>) {
+    init(store: StoreOf<RoutineDetailReducer>, onBack: (() -> Void)? = nil) {
+        self.onBack = onBack
         self.store = store
     }
 
@@ -21,8 +21,10 @@ struct RoutineDetailView: View {
         VStack(spacing: 0) {
             AppTopBar(
                 store.state.title,
-                leading: .asset("CaretLeft", label: "뒤로가기") { dismiss() },
-                trailing: .asset("DotsThree", label: "더보기") { isRoutineMenuPresented = true }
+                leading: .asset("CaretLeft", label: "뒤로가기") {
+                    if let onBack { onBack() } else { dismiss() }
+                },
+                trailing: .asset("DotsThree", label: "더보기", isEnabled: false) {}
             )
 
             ScrollViewReader { proxy in
@@ -76,19 +78,6 @@ struct RoutineDetailView: View {
                 .scrollDismissesKeyboard(.interactively)
             }
         }
-        .confirmationDialog("루틴 관리", isPresented: $isRoutineMenuPresented) {
-            if store.state.isOwner {
-                Button("삭제하기", role: .destructive) { isDeleteRoutinePresented = true }
-            }
-            Button("취소", role: .cancel) {}
-        }
-        .alert("루틴을 정말로 삭제하시겠습니까?", isPresented: $isDeleteRoutinePresented) {
-            Button("취소", role: .cancel) {}
-            Button("확인", role: .destructive) { store.send(.deleteRoutine) }
-        } message: {
-            Text("현재는 미리보기 화면만 닫으며 서버 데이터는 삭제하지 않습니다.")
-        }
-        .onChange(of: store.state.isDeleted) { _, deleted in if deleted { dismiss() } }
         .sheet(isPresented: $isCommentsPresented) {
             commentsSheet
                 .presentationDetents([.medium, .large])

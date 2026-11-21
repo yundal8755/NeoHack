@@ -40,7 +40,7 @@ struct RoutineDetailReducerTests {
         #expect(state.commentCount == 1)
     }
 
-    @Test func 참여_상태와_루틴_삭제_권한() {
+    @Test func 참여_상태가_중복_완료되지_않는다() {
         var state = RoutineDetailReducer.State(title: "루틴", participatingCount: 3, completedCount: 10)
         let reducer = RoutineDetailReducer()
         _ = reducer.reduce(&state, with: .participateTapped)
@@ -51,10 +51,6 @@ struct RoutineDetailReducerTests {
         #expect(state.participation == .completed)
         #expect(state.participatingCount == 3)
         #expect(state.completedCount == 11)
-        _ = reducer.reduce(&state, with: .deleteRoutine)
-        #expect(!state.isDeleted)
-        state.isOwner = true
-        _ = reducer.reduce(&state, with: .deleteRoutine)
-        #expect(state.isDeleted)
+
     }
 }

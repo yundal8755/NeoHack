@@ -21,9 +21,10 @@ struct AppTopBar: View {
 
         let content: Content
         let action: () -> Void
+        var isEnabled = true
 
-        static func asset(_ name: String, label: String, action: @escaping () -> Void) -> Item {
-            Item(content: .asset(name: name, label: label), action: action)
+        static func asset(_ name: String, label: String, isEnabled: Bool = true, action: @escaping () -> Void) -> Item {
+            Item(content: .asset(name: name, label: label), action: action, isEnabled: isEnabled)
         }
 
         static func icon(_ systemName: String, label: String, action: @escaping () -> Void) -> Item {
@@ -77,11 +78,13 @@ struct AppTopBar: View {
             HStack(spacing: 0) {
                 if let leading {
                     itemView(leading)
+                        .disabled(!leading.isEnabled)
                         .accessibilityIdentifier(AccessibilityID.TopBar.leadingButton)
                 }
                 Spacer(minLength: 0)
                 if let trailing {
                     itemView(trailing)
+                        .disabled(!trailing.isEnabled)
                         .accessibilityIdentifier(AccessibilityID.TopBar.trailingButton)
                 }
             }

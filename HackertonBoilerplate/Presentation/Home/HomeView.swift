@@ -45,8 +45,13 @@ struct HomeView: View {
             }
             .toolbar(.hidden, for: .navigationBar)
             .navigationDestination(for: Int.self) { id in
-                if let routine = store.state.routines.first(where: { $0.id == id }) {
-                    RoutineDetailDestination(state: routine.detail)
+                if let routine = (isProfilePresented
+                    ? profileStore.state.myRoutines + profileStore.state.participatingRoutines
+                    : store.state.routines).first(where: { $0.id == id }) {
+                    RoutineDetailDestination(state: routine.detail) {
+                        navigationPath.removeAll()
+                    }
+                    .id(id)
                 }
             }
         }
@@ -58,7 +63,14 @@ struct HomeView: View {
     }
 
     private var profileView: some View {
-        MyProfileView(store: profileStore) { isProfilePresented = false }
+        MyProfileView(store: profileStore, onRoutineSelected: { id in
+            guard navigationPath.isEmpty else { return }
+            navigationPath = [id]
+        }) {
+            navigationPath.removeAll()
+            isHomeDragging = false
+            isProfilePresented = false
+        }
     }
 
     private var sortPicker: some View {
@@ -133,8 +145,8 @@ struct HomeView: View {
                 }
                 ForEach(store.state.sortedRoutines) { routine in
                     Button {
-                        guard !isHomeDragging, !isProfilePresented, !isPickingRoutineImages else { return }
-                        navigationPath.append(routine.id)
+                        guard navigationPath.isEmpty, !isHomeDragging, !isProfilePresented, !isPickingRoutineImages else { return }
+                        navigationPath = [routine.id]
                     } label: {
                         RoutineListRow(routine: routine)
                     }

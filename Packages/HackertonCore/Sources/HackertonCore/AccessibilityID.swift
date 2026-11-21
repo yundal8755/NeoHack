@@ -4,6 +4,20 @@ import Foundation
 /// 화면을 추가하면 같은 이름의 하위 enum을 만들고 `<화면>.<요소>` 형식으로 값을 정한다.
 /// 공통 컴포넌트는 `<컴포넌트>.<요소>` 형식을 쓴다.
 public enum AccessibilityID {
+    public enum Home {
+        public static let sortButton = "home.sortButton"
+        public static let createButton = "home.createButton"
+        public static func routine(_ id: Int) -> String { "home.routine.\(id)" }
+    }
+    public enum RoutineDetail {
+        public static let screen = "routineDetail.screen"
+        public static let likeButton = "routineDetail.likeButton"
+        public static let commentsButton = "routineDetail.commentsButton"
+        public static let allCommentsButton = "routineDetail.allCommentsButton"
+        public static let participateButton = "routineDetail.participateButton"
+        public static let commentField = "routineDetail.commentField"
+        public static let submitCommentButton = "routineDetail.submitCommentButton"
+    }
     public enum Root {
         public static let homeScreen = "root.homeScreen"
     }

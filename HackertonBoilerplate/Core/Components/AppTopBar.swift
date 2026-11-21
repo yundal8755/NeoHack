@@ -15,11 +15,16 @@ struct AppTopBar: View {
     struct Item {
         enum Content {
             case icon(systemName: String, label: String)
+            case asset(name: String, label: String)
             case text(String)
         }
 
         let content: Content
         let action: () -> Void
+
+        static func asset(_ name: String, label: String, action: @escaping () -> Void) -> Item {
+            Item(content: .asset(name: name, label: label), action: action)
+        }
 
         static func icon(_ systemName: String, label: String, action: @escaping () -> Void) -> Item {
             Item(content: .icon(systemName: systemName, label: label), action: action)
@@ -93,6 +98,17 @@ struct AppTopBar: View {
     @ViewBuilder
     private func itemView(_ item: Item) -> some View {
         switch item.content {
+        case let .asset(name, label):
+            Button(action: item.action) {
+                Image(name)
+                    .renderingMode(.template)
+                    .foregroundStyle(AppColor.grayBlack)
+                    .frame(width: Self.iconSize, height: Self.iconSize)
+                    .contentShape(Rectangle().inset(by: -10))
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(Text(verbatim: label))
+
         case let .icon(systemName, label):
             Button(action: item.action) {
                 Image(systemName: systemName)

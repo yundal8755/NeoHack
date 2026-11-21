@@ -21,23 +21,31 @@ Data layer와 Entity 구성은 서버 연결 담당이 맡고, UI 담당은 전�
 
 아래 경로의 `<Feature>`는 새 서비스의 실제 기능 이름으로 바꾼다.
 
+로직은 로컬 패키지 `Packages/HackertonCore`에 두고 `swift test`로 빠르게 검증한다. SwiftUI View와 외부 라이브러리를 쓰는 구현체는 앱 타깃에 둔다. 테스트 방법은 [테스트 가이드](Testing.md)를 따른다.
+
 ```text
-App/
-  AppContainer.swift
-Core/
-  MVICore/
-  Network/
-  Components/
-Data/<Feature>/
-  <Feature>Endpoint.swift
-  <Feature>DTO.swift
-  <Feature>Mapper.swift
-  <Feature>Repository.swift
-Entity/<Feature>/
-  <Feature>.swift
-Presentation/<Feature>/
-  <Feature>View.swift
-  <Feature>Reducer.swift
+Packages/HackertonCore/Sources/
+  MVICore/                         Reducer, Effect, Store
+  HackertonCore/
+    Entity/<Feature>/<Feature>.swift
+    Domain/<Feature>Repository.swift       Repository 프로토콜
+    DataModel/<Feature>/
+      <Feature>DTO.swift
+      <Feature>Mapper.swift
+    Feature/<Feature>/<Feature>Reducer.swift
+  HackertonMocks/Mock<Feature>Repository.swift
+
+HackertonBoilerplate/
+  App/
+    AppContainer.swift             실행 인자에 따라 실제 구현체 또는 Mock 주입
+  Core/
+    Network/
+    Components/
+  Data/<Feature>/
+    <Feature>Endpoint.swift
+    <Feature>Repository.swift      Repository 프로토콜의 실제 구현체
+  Presentation/<Feature>/
+    <Feature>View.swift
 ```
 
 ## 각 구성의 책임
@@ -49,11 +57,11 @@ Presentation/<Feature>/
 | DTO | 서버 요청·응답 형식을 표현한다. 응답 DTO는 `Decodable`, 요청 DTO는 `Encodable`을 사용한다. |
 | Mapper | DTO의 필드명, 타입, 날짜, 선택값 등을 앱에서 사용할 Entity로 변환한다. |
 | Entity | 서버 응답 형식과 분리된 앱 모델이다. SwiftUI, Alamofire, DTO에 의존하지 않는다. |
-| Repository | API 호출과 성공·실패 판단, DTO → Entity 변환을 조합한다. 화면에는 Entity 또는 Entity 목록·페이지를 반환한다. |
-| Reducer | State와 Action을 내부에 정의하고, Repository 결과를 State에 반영한다. |
-| AppContainer | NetworkManager와 저장소, 실제 기능의 Repository를 생성해 주입한다. |
+| Repository | 프로토콜은 패키지 `Domain`에, 구현체는 앱 `Data`에 둔다. API 호출과 성공·실패 판단, DTO → Entity 변환을 조합한다. 화면에는 Entity 또는 Entity 목록·페이지를 반환한다. |
+| Reducer | 패키지 `Feature`에 둔다. State와 Action을 내부에 정의하고, init으로 받은 Repository 결과를 State에 반영한다. |
+| AppContainer | NetworkManager와 저장소, 실제 기능의 Repository를 생성해 주입한다. `-mock-mode` 실행 인자가 있으면 Mock을 주입한다. |
 
-`Data`는 `Core/Network`와 `Entity`를 사용한다. `Presentation`은 Repository와 Entity를 사용하고, `Core/Network`는 서비스별 DTO나 Entity를 참조하지 않는다.
+앱의 `Data`는 `Core/Network`와 패키지의 DTO·Mapper·Entity를 사용한다. `Presentation`은 패키지의 Reducer와 Entity를 사용하고, `Core/Network`는 서비스별 DTO나 Entity를 참조하지 않는다. 패키지는 앱 타깃을 참조하지 않는다.
 
 ## API 계약과 변환 규칙
 

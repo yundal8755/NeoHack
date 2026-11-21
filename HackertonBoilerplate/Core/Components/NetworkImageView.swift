@@ -118,6 +118,8 @@ struct NetworkImageView: View {
                 .aspectRatio(contentMode: contentMode)
                 .frame(width: geometry.size.width, height: geometry.size.height)
                 .clipped()
+                // clipped()는 그리기만 자른다. .fill로 넘친 이미지가 주변 뷰의 탭을 가로채지 않게 터치 영역도 프레임으로 제한한다.
+                .contentShape(Rectangle())
         }
     }
 

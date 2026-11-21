@@ -179,7 +179,7 @@ struct RoutineCreateView: View {
 
             FormField("제목", guide: "5자에서 30자까지 입력해 주세요.", isRequired: true) {
                 AppTextField(
-                    "5자에서 30자까지 입력해 주세요.",
+                    "예: 아침에 지하철 타러가요",
                     text: Binding(get: { step.title }, set: { store.send(.stepTitleChanged($0)) }),
                     maxLength: Feature.stepTitleLength.upperBound
                 )
@@ -189,7 +189,7 @@ struct RoutineCreateView: View {
 
             FormField("내용", guide: "최대 100자까지 입력 가능합니다.") {
                 AppTextField(
-                    "최대 100자까지 입력 가능합니다.",
+                    "예: 아침에 역시나 사람이 많아요. 지하철 사람들이 모두 회색 인간인 것 같아요. 출근할 때 항상 타는 것인데, 먼가 우울하게 시작하는 것 같아요.",
                     text: Binding(get: { step.content }, set: { store.send(.stepContentChanged($0)) }),
                     axis: .vertical,
                     maxLength: Feature.stepContentMaxLength

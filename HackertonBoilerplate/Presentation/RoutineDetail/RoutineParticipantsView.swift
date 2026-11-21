@@ -74,6 +74,7 @@ struct RoutineParticipantsView: View {
         }
         .background(AppColor.background)
         .toolbar(.hidden, for: .navigationBar)
+        .swipeBack(isEnabled: selectedParticipantID == nil, action: onBack)
         .task { store.send(.appeared) }
         .accessibilityIdentifier(AccessibilityID.RoutineParticipants.screen)
         .navigationDestination(isPresented: Binding(

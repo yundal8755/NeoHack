@@ -118,19 +118,22 @@ struct RoutineDetailView: View {
                                     }
                                 }
 
-                                Button {
-                                    isCommentsPresented = true
-                                } label: {
-                                    Text("댓글 전체보기")
-                                        .appFont(AppFont.caption1)
-                                        .foregroundStyle(AppColor.textSecondary)
-                                        .frame(maxWidth: .infinity, minHeight: 44)
-                                        .contentShape(Rectangle())
+                                if store.state.comments.count >= 5 {
+                                    Button {
+                                        isCommentsPresented = true
+                                    } label: {
+                                        Text("댓글 전체보기")
+                                            .appFont(AppFont.caption1)
+                                            .foregroundStyle(AppColor.textSecondary)
+                                            .frame(maxWidth: .infinity, minHeight: 44)
+                                            .contentShape(Rectangle())
+                                    }
+                                    .buttonStyle(.plain)
+                                    .accessibilityIdentifier(AccessibilityID.RoutineDetail.allCommentsButton)
+                                    .padding(.bottom, AppSpacing.md)
+
                                 }
-                                .buttonStyle(.plain)
-                                .accessibilityIdentifier(AccessibilityID.RoutineDetail.allCommentsButton)
-                                .padding(.bottom, AppSpacing.md)
-                                .id("commentPreviewEnd")
+                                Color.clear.frame(height: 1).id("commentPreviewEnd")
                             }
 
                         }
@@ -373,7 +376,7 @@ struct RoutineDetailView: View {
             if session != nil, routineID != nil {
                 Button { isResultsPresented = true } label: {
                     Text("참여 완료 \(store.state.completedCount)")
-                        .foregroundStyle(AppColor.primary)
+                        .foregroundStyle(AppColor.gray500)
                         .frame(minHeight: 44)
                         .contentShape(Rectangle())
                 }

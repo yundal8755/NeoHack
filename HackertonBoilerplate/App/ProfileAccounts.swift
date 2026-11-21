@@ -8,6 +8,8 @@ final class ProfileAccounts: ObservableObject {
     @Published private(set) var entries: [TestAccount] = []
     @Published private(set) var isLoading = false
     @Published private(set) var error: String?
+    /// 선택해서 계정을 받아오는 중인 계정 ID. 카드의 연결 중 표시에 쓴다.
+    @Published private(set) var connectingID: String?
     private var lease: TestAccountLease?
     private var keepAlive: Task<Void, Never>?
 
@@ -27,9 +29,13 @@ final class ProfileAccounts: ObservableObject {
     func choose(_ account: TestAccount) {
         guard account.available, !isLoading, session == nil else { return }
         isLoading = true
+        connectingID = account.id
         error = nil
         Task {
-            defer { isLoading = false }
+            defer {
+                isLoading = false
+                connectingID = nil
+            }
             do {
                 let claimed = try await container.testAccounts.claim(accountID: account.id)
                 do {
@@ -48,6 +54,10 @@ final class ProfileAccounts: ObservableObject {
                 self.error = error.localizedDescription
             }
         }
+    }
+
+    func dismissError() {
+        error = nil
     }
 
     func signOut() {

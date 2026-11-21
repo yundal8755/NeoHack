@@ -33,6 +33,11 @@ public enum AccessibilityID {
         public static let homeScreen = "root.homeScreen"
     }
 
+    public enum AccountSelect {
+        public static let screen = "accountSelect.screen"
+        public static func card(_ slot: Int) -> String { "accountSelect.card.\(slot)" }
+    }
+
     public enum Splash {
         public static let screen = "splash.screen"
     }

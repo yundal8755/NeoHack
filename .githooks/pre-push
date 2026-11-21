@@ -1,0 +1,43 @@
+#!/usr/bin/env bash
+# dev·main으로 push할 때 테스트를 먼저 돌리고, 실패하면 push를 막는다.
+#
+#   설치(클론마다 한 번):  git config core.hooksPath .githooks
+#   기본:                  scripts/test.sh (패키지 로직 테스트, 수 초)
+#   화면을 바꿨을 때:      PRE_PUSH_TESTS=all git push origin <브랜치>:dev
+#   급할 때 건너뛰기:      git push --no-verify ...
+set -euo pipefail
+
+PROTECTED_BRANCHES=("dev" "main")
+ZERO_SHA="0000000000000000000000000000000000000000"
+
+targets=()
+while read -r local_ref local_sha remote_ref remote_sha; do
+    [[ "$local_sha" == "$ZERO_SHA" ]] && continue   # 브랜치 삭제는 검사하지 않는다
+    branch="${remote_ref#refs/heads/}"
+    for protected in "${PROTECTED_BRANCHES[@]}"; do
+        if [[ "$branch" == "$protected" ]]; then
+            targets+=("$branch")
+            if [[ "$local_sha" != "$(git rev-parse HEAD)" ]]; then
+                echo "⚠️  push하는 커밋($local_ref)이 현재 체크아웃(HEAD)과 달라요. 테스트는 현재 작업 폴더 기준으로 돌아요." >&2
+            fi
+        fi
+    done
+done
+
+[[ ${#targets[@]} -eq 0 ]] && exit 0
+
+ROOT="$(git rev-parse --show-toplevel)"
+mode="${PRE_PUSH_TESTS:-core}"
+
+if [[ -n "$(git status --porcelain --untracked-files=no)" ]]; then
+    echo "⚠️  커밋하지 않은 변경이 있어요. 테스트에는 반영되지만 push에는 포함되지 않아요." >&2
+fi
+
+echo "🧪 ${targets[*]}(으)로 push하기 전에 테스트를 실행해요: scripts/test.sh $mode" >&2
+if ! "$ROOT/scripts/test.sh" "$mode" </dev/null; then
+    echo "" >&2
+    echo "❌ 테스트가 실패해서 push를 중단했어요. 고친 뒤 다시 push하세요." >&2
+    echo "   (정말 급하면 git push --no-verify 로 건너뛸 수 있지만 권장하지 않아요.)" >&2
+    exit 1
+fi
+echo "✅ 테스트 통과. push를 계속해요." >&2

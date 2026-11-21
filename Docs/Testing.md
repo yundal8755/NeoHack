@@ -117,3 +117,15 @@ scripts/test.sh all        # 전체
 ```
 
 `xcbeautify`가 설치되어 있으면 출력을 정리하고, 없으면 설치 안내를 한 줄 띄운 뒤 빌드 오류, 실패한 테스트와 이유, 최종 결과만 걸러서 보여준다. 설치는 선택이며 권장한다(`brew install xcbeautify`).
+
+## push 전 자동 테스트
+
+`.githooks/pre-push`는 `dev`나 `main`으로 push할 때 `scripts/test.sh`를 먼저 실행하고, 실패하면 push를 막는다. 다른 브랜치로의 push는 검사하지 않는다. 클론마다 한 번 활성화한다.
+
+```bash
+git config core.hooksPath .githooks
+```
+
+- 기본은 패키지 로직 테스트(`core`)만 실행한다. 화면을 바꿨으면 `PRE_PUSH_TESTS=all git push origin <브랜치>:dev`로 스냅샷·UI 테스트까지 실행한다.
+- 테스트는 현재 작업 폴더 기준으로 돈다. 커밋하지 않은 변경이 있으면 경고를 띄운다.
+- `git push --no-verify`로 건너뛸 수 있지만 쓰지 않는다.

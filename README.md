@@ -26,6 +26,12 @@ UI 테스트 로그를 보기 좋게 보려면 [xcbeautify](https://github.com/c
 brew install xcbeautify
 ```
 
+`dev`·`main`으로 push할 때 테스트를 자동으로 돌리려면 클론 후 한 번 hook을 활성화합니다.
+
+```bash
+git config core.hooksPath .githooks
+```
+
 자세한 내용은 [테스트 가이드](Docs/Testing.md)를 참고합니다.
 
 ## 서버 설정

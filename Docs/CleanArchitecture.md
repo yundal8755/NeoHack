@@ -15,7 +15,18 @@ Data layer와 Entity 구성은 서버 연결 담당이 맡고, UI 담당은 전�
 - Reducer는 상태를 변경하며, API 호출 같은 비동기 작업은 Effect에서 실행한다.
 - Repository는 Endpoint로 요청하고 응답 DTO를 Mapper에 전달해 Entity를 반환한다.
 - Mapper는 네트워크 호출이나 화면 상태 변경 없이 데이터만 변환한다.
-- View와 Reducer는 DTO를 직접 해석하거나 URL을 조립하지 않는다.
+- View와 Reducer는 DTO를 직접 생성·참조·인코딩·디코딩하거나 URL을 조립하지 않는다.
+
+## UI와 Data layer의 경계
+
+- View는 State를 표시하고 Action을 보낸다. Repository 호출은 Reducer의 Effect에서 수행한다.
+- Reducer는 init으로 주입받은 Repository 프로토콜을 사용하고, 반환받은 Entity를 State에 반영한다. Repository 구현체, Endpoint, NetworkManager, Mapper를 직접 사용하지 않는다.
+- State와 Action의 데이터 타입에는 Entity와 필요한 기본 타입을 사용한다. 서버 요청·응답 DTO와 서버 응답 wrapper를 보관하지 않는다.
+- Repository 프로토콜은 DTO 타입을 입력·반환값으로 노출하지 않는다. UI에는 호출할 메서드, 입력값, 반환 Entity, 오류 처리 방식만 공유한다.
+- 요청은 UI의 입력값을 기본 타입이나 앱 입력 모델로 받아 Repository 구현체에서 요청 DTO를 만든다. 모든 입력을 하나의 Entity로 감쌀 필요는 없다.
+- 응답은 Repository 구현체가 DTO를 디코딩하고 Mapper로 Entity로 변환한 뒤 반환한다. 서버 필드명과 응답 형식의 변경은 Data layer에서 처리한다.
+
+현재는 DTO 준비 단계이며 Entity는 아직 생성하지 않는다. Entity가 준비되지 않았다는 이유로 DTO를 화면에 직접 연결하지 않는다. 위 내용은 이후 UI 연동 시 지킬 경계이며, Entity·Mapper·Repository를 지금 추가하라는 의미가 아니다.
 
 ## 기능을 추가할 때의 폴더 구조
 
@@ -57,7 +68,7 @@ HackertonBoilerplate/
 | DTO | 서버 요청·응답 형식을 표현한다. 응답 DTO는 `Decodable`, 요청 DTO는 `Encodable`을 사용한다. |
 | Mapper | DTO의 필드명, 타입, 날짜, 선택값 등을 앱에서 사용할 Entity로 변환한다. |
 | Entity | 서버 응답 형식과 분리된 앱 모델이다. SwiftUI, Alamofire, DTO에 의존하지 않는다. |
-| Repository | 프로토콜은 패키지 `Domain`에, 구현체는 앱 `Data`에 둔다. API 호출과 성공·실패 판단, DTO → Entity 변환을 조합한다. 화면에는 Entity 또는 Entity 목록·페이지를 반환한다. |
+| Repository | 프로토콜은 패키지 `Domain`에, 구현체는 앱 `Data`에 둔다. 프로토콜에는 DTO를 노출하지 않고, 구현체가 요청 DTO 생성과 API 호출, 성공·실패 판단, DTO → Entity 변환을 조합한다. 화면에는 Entity 또는 Entity 목록·페이지를 반환한다. |
 | Reducer | 패키지 `Feature`에 둔다. State와 Action을 내부에 정의하고, init으로 받은 Repository 결과를 State에 반영한다. |
 | AppContainer | NetworkManager와 저장소, 실제 기능의 Repository를 생성해 주입한다. `-mock-mode` 실행 인자가 있으면 Mock을 주입한다. |
 

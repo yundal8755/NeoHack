@@ -36,15 +36,18 @@ git push origin dev
 - Figma에서 구현할 프레임의 링크를 복사해 구현을 요청합니다. 세부 절차는 [AGENTS.md](../AGENTS.md)를 따릅니다.
 - 화면은 View(`Presentation/<Feature>`)와 Reducer(`Packages/HackertonCore/Sources/HackertonCore/Feature/<Feature>`)로 구성합니다. State와 Action은 Reducer 내부에 정의합니다.
 - Reducer 테스트와 화면 스냅샷 테스트를 함께 추가합니다. 방법은 [테스트 가이드](Testing.md)를 따릅니다.
-- 주입받은 Repository가 반환하는 Entity를 화면 상태에 반영합니다.
+- Reducer에서 주입받은 Repository 프로토콜을 호출하고, 반환된 Entity를 화면 상태에 반영합니다. View는 State를 표시하고 Action을 보냅니다.
+- UI 계층의 View·Reducer·State·Action에는 DTO를 사용하지 않습니다. 요청 DTO 생성과 응답 디코딩·매핑은 Repository 구현체가 담당하며, UI는 기본 타입이나 앱 입력 모델로 값을 전달합니다.
 - 필요한 Entity 필드·타입을 서버 연결 담당에게 전달합니다.
 - 서버 응답 DTO 해석과 Mapper 구현은 서버 연결 담당이 맡습니다.
+- 현재는 DTO만 준비하는 단계로 Entity는 아직 만들지 않습니다. UI 작업을 위해 DTO를 Entity 대신 연결하지 않습니다.
 
 ## 서버 연결·테스트·기타 작업
 
 - 앱 `Data/<Feature>`의 Endpoint와 Repository 구현체, 패키지의 DTO·Mapper·Repository 프로토콜·Mock을 온전히 담당합니다.
 - 패키지 `Entity/<Feature>`에 UI에서 사용할 모델을 올바르게 구성합니다.
 - 실제 서버 응답을 DTO로 받고 Mapper를 통해 Entity로 변환해 전달합니다.
+- Repository 프로토콜에는 DTO를 노출하지 않고, 요청 DTO 생성은 구현체 내부에서 처리합니다. Entity 생성과 화면 연결은 이후 해당 기능을 구현할 때 진행합니다.
 - AppContainer에서 Repository를 생성하고 UI에 연결할 수 있도록 준비합니다.
 - 서버 응답, 매핑 결과, 화면 연결을 테스트하고 정상·빈 결과·오류 상황을 확인합니다.
 - 실행·설정 문제와 기타 필요한 작업을 처리합니다.

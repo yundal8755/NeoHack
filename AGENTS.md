@@ -5,6 +5,9 @@
 - `dev` 반영은 PR 작성이나 팀원 리뷰·승인을 필수 단계로 요구하지 않는다. 개인 작업 브랜치의 변경을 로컬에서 `dev`에 병합한 뒤 원격 `dev`로 직접 push하는 방식을 사용한다.
 - 화면 상태가 필요한 기능은 기존 MVI 코어를 사용한다. View와 Reducer를 기본으로 두고 State와 Action은 Reducer 내부에 정의한다.
 - API 연동은 `Docs/CleanArchitecture.md`를 따른다. 앱의 `Data/<Feature>`에 있는 Endpoint와 Repository 구현체가 요청하고, 패키지의 Mapper가 DTO를 Entity로 변환한 뒤 화면에 전달한다. 서비스별 코드는 실제 기능을 구현할 때 추가한다.
+- UI 계층(View·Reducer)은 DTO를 직접 생성·참조·인코딩·디코딩하지 않는다. State와 Action에도 DTO를 보관하지 않는다. View는 State와 Action을 사용하고, Reducer는 init으로 주입받은 Repository 프로토콜과 Entity를 사용한다.
+- Repository 프로토콜의 입력·반환 타입에 DTO를 노출하지 않는다. 입력은 기본 타입이나 앱 입력 모델로 받고, Repository 구현체가 요청 DTO를 생성한다. 응답 DTO는 구현체에서 Mapper를 거쳐 Entity로 변환해 반환한다.
+- 현재 단계는 DTO만 준비한다. Entity는 아직 생성하지 않으며, UI 연결을 위해 DTO를 Entity 대신 사용하는 우회 구현도 하지 않는다.
 - Figma 구현 요청은 프레임별 Dev Mode 링크의 fileKey와 node-id를 사용한다. 브랜치 링크는 브랜치 키를 사용하며 페이지 링크만 있으면 메타데이터에서 대상 프레임을 찾는다. 대상이 모호하거나 접근이 막히면 프레임 링크 또는 접근 권한을 요청한다.
 - Figma 디자인→코드 및 SwiftUI 스킬을 읽고 Figma MCP에서 디자인 컨텍스트와 스크린샷을 확인한다. 컨텍스트 요청에는 clientLanguages=swift, clientFrameworks=swiftui를 지정한다.
 - Figma의 변수, 타이포그래피, 간격, 컴포넌트 상태를 기존 AppFont, AppColor, AppSpacing, AppRadius와 공용 SwiftUI 컴포넌트에 매핑한다. 제공된 에셋은 앱 에셋 카탈로그에 등록한다. 실제 화면을 빌드한 뒤 시뮬레이터 스크린샷을 원본 프레임과 비교한다.

@@ -235,9 +235,12 @@ struct RoutineDetailView: View {
                 }
             }
         }
-        .sheet(isPresented: $isPublicProfilePresented) {
+        .navigationDestination(isPresented: $isPublicProfilePresented) {
             if let session, let owner = store.state.entity?.owner {
-                PublicProfileView(publicID: owner.id, users: session.repositories.users)
+                PublicProfileView(publicID: owner.id, users: session.repositories.users, session: session, onBack: {
+                    isPublicProfilePresented = false
+                    store.send(.load)
+                })
             }
         }
         .sheet(isPresented: $isCommentsPresented) {

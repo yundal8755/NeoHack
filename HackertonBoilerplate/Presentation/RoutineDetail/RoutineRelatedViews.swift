@@ -138,25 +138,67 @@ struct ParticipationResultsView: View {
 struct PublicProfileView: View {
     @StateObject private var store: StoreOf<RoutineRelatedLoader<UserEntity>>
     @Environment(\.dismiss) private var dismiss
+    private let session: ProfileSession?
+    private let onBack: (() -> Void)?
+    @State private var selectedRoutine: HomeReducer.Routine?
+    @State private var routineUpdatedID: UUID?
+    @State private var deletedRoutineID: String?
 
     init(
         publicID: String, users: any UserRepository,
-        store: StoreOf<RoutineRelatedLoader<UserEntity>>? = nil
+        store: StoreOf<RoutineRelatedLoader<UserEntity>>? = nil,
+        session: ProfileSession? = nil, onBack: (() -> Void)? = nil
     ) {
+        self.session = session
+        self.onBack = onBack
         _store = StateObject(wrappedValue: store ?? Store(
             state: .loading, reducer: RoutineRelatedLoader { try await users.profile(publicID: publicID) }))
     }
 
     var body: some View {
-        VStack(spacing: 0) {
-            AppTopBar("프로필", leading: .asset("CaretLeft", label: "닫기") { dismiss() })
-            content
-                .padding(AppSpacing.md)
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
+        Group {
+            if case let .loaded(profile) = store.state, let session {
+                MyProfileView(session: session, deletedRoutineID: deletedRoutineID, viewedProfile: profile,
+                              routineUpdatedID: routineUpdatedID, onRoutineSelected: { routine in
+                    guard selectedRoutine == nil else { return }
+                    selectedRoutine = routine
+                }, onBack: close)
+                .id(profile.id)
+            } else {
+                VStack(spacing: 0) {
+                    AppTopBar("프로필", leading: .asset("CaretLeft", label: "뒤로가기", action: close))
+                    content
+                        .padding(AppSpacing.md)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                }
+            }
         }
         .background(AppColor.background)
         .task { if case .loading = store.state { store.send(.load) } }
         .accessibilityIdentifier(AccessibilityID.RoutineDetail.publicProfileScreen)
+        .toolbar(.hidden, for: .navigationBar)
+        .navigationDestination(isPresented: Binding(
+            get: { selectedRoutine != nil }, set: { if !$0 { selectedRoutine = nil } }
+        )) {
+            if let routine = selectedRoutine, let session {
+                RoutineDetailDestination(id: routine.id, session: session,
+                    resultParticipantID: routine.resultParticipantID,
+                    onParticipationCompleted: {
+                        selectedRoutine = nil
+                        routineUpdatedID = UUID()
+                    }, onUpdated: { routineUpdatedID = UUID() },
+                    onBack: { selectedRoutine = nil }, onDelete: {
+                        selectedRoutine = nil
+                        deletedRoutineID = routine.id
+                        routineUpdatedID = UUID()
+                    })
+                    .id(routine.id + (routine.resultParticipantID ?? ""))
+            }
+        }
+    }
+
+    private func close() {
+        if let onBack { onBack() } else { dismiss() }
     }
 
     @ViewBuilder private var content: some View {

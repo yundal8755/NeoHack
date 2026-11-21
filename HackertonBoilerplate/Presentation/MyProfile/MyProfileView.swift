@@ -10,6 +10,7 @@ struct MyProfileView: View {
     private let routineUpdatedID: UUID?
     @StateObject private var mine: StoreOf<HomeReducer>
     private let session: ProfileSession?
+    private let viewedProfile: UserEntity?
     private let onBack: () -> Void
     private let onRoutineSelected: (HomeReducer.Routine) -> Void
     private let deletedRoutineID: String?
@@ -28,29 +29,48 @@ struct MyProfileView: View {
         routineUpdatedID = nil
         _participating = StateObject(wrappedValue: StoreOf<HomeReducer>(state: .init(), reducer: HomeReducer()))
         session = nil
+        viewedProfile = nil
     }
 
     init(
-        session: ProfileSession, deletedRoutineID: String?, participationCompletedID: UUID? = nil,
+        session: ProfileSession, deletedRoutineID: String?, viewedProfile: UserEntity? = nil, participationCompletedID: UUID? = nil,
         routineUpdatedID: UUID? = nil,
         onRoutineSelected: @escaping (HomeReducer.Routine) -> Void, onBack: @escaping () -> Void
     ) {
+        let profile = viewedProfile ?? session.profile
+        let isOwnProfile = profile.id == session.profile.id
+        self.viewedProfile = viewedProfile
         _store = StateObject(
             wrappedValue: StoreOf<MyProfileReducer>(
-                state: .init(nickname: session.profile.nickname, introduction: session.profile.bio ?? ""),
-                reducer: MyProfileReducer(users: session.repositories.users, images: session.repositories.images)))
+                state: .init(nickname: profile.nickname, introduction: profile.bio ?? ""),
+                reducer: MyProfileReducer(users: isOwnProfile ? session.repositories.users : nil,
+                                          images: isOwnProfile ? session.repositories.images : nil)))
         _mine = StateObject(
             wrappedValue: StoreOf<HomeReducer>(
                 state: .init(),
-                reducer: HomeReducer(repository: session.repositories.routines, authorID: session.profile.id)))
+                reducer: HomeReducer(repository: session.repositories.routines, authorID: profile.id)))
         _participating = StateObject(wrappedValue: StoreOf<HomeReducer>(
-            state: .init(), reducer: HomeReducer(repository: session.repositories.routines, participantID: session.profile.id)))
+            state: .init(), reducer: HomeReducer(repository: session.repositories.routines, participantID: profile.id)))
         self.participationCompletedID = participationCompletedID
         self.routineUpdatedID = routineUpdatedID
         self.session = session
         self.deletedRoutineID = deletedRoutineID
         self.onRoutineSelected = onRoutineSelected
         self.onBack = onBack
+    }
+
+    private var isOwnProfile: Bool {
+        guard let viewedProfile else { return true }
+        return viewedProfile.id == session?.profile.id
+    }
+
+    private var profileImageURL: URL? {
+        if isOwnProfile { return session?.profileImageURL }
+        return viewedProfile?.profileImageURL
+    }
+
+    private var authoredTabTitle: String {
+        isOwnProfile ? "내 루틴" : "\(store.state.nickname)의 루틴"
     }
 
     private var visibleRoutines: [HomeReducer.Routine] {
@@ -63,13 +83,13 @@ struct MyProfileView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            AppTopBar("마이", leading: .asset("CaretLeft", label: "홈으로 돌아가기", action: onBack))
+            AppTopBar("프로필", leading: .asset("CaretLeft", label: "뒤로가기", action: onBack))
             ScrollView {
                 VStack(alignment: .leading, spacing: 0) {
                     profileHeader
                     HStack(spacing: AppSpacing.sm) {
                         tab(
-                            session == nil ? "내 루틴 (\(store.state.myRoutines.count))" : tabTitle("내 루틴", count: mine.state.totalCount),
+                            session == nil ? "\(authoredTabTitle) (\(store.state.myRoutines.count))" : tabTitle(authoredTabTitle, count: mine.state.totalCount),
                             selection: .mine, id: AccessibilityID.MyProfile.myRoutinesTab)
                         tab(
                             session == nil ? "참여 루틴 (\(store.state.participatingRoutines.count))" : tabTitle("참여 루틴", count: participating.state.totalCount),
@@ -136,11 +156,11 @@ struct MyProfileView: View {
         }
         .navigationDestination(
             isPresented: Binding(
-                get: { store.state.edit != nil },
+                get: { isOwnProfile && store.state.edit != nil },
                 set: { if !$0 { store.send(.editorDismissed) } }
             )
         ) {
-            ProfileEditView(store: store, imageURL: session?.profileImageURL)
+            ProfileEditView(store: store, imageURL: profileImageURL)
         }
         .onChange(of: store.state.updatedProfile) { _, profile in
             if let profile, session?.profile.id == profile.id {
@@ -161,7 +181,7 @@ struct MyProfileView: View {
 
     private var profileHeader: some View {
         HStack(spacing: 20) {
-            if let url = session?.profileImageURL {
+            if let url = profileImageURL {
                 ProfileAvatar(url: url, size: 93)
             } else {
                 Image("MyProfileAvatar")
@@ -178,21 +198,23 @@ struct MyProfileView: View {
                         .fixedSize(horizontal: false, vertical: true)
                 }
                 .foregroundStyle(AppColor.grayBlack)
-                Button {
-                    store.send(.editTapped)
-                } label: {
-                    HStack(spacing: AppSpacing.xxs) {
-                        Text("프로필 편집").appFont(AppFont.caption2)
-                        Image("CaretLeft")
-                            .resizable()
-                            .frame(width: 16, height: 16)
-                            .rotationEffect(.degrees(180))
+                if isOwnProfile {
+                    Button {
+                        store.send(.editTapped)
+                    } label: {
+                        HStack(spacing: AppSpacing.xxs) {
+                            Text("프로필 편집").appFont(AppFont.caption2)
+                            Image("CaretLeft")
+                                .resizable()
+                                .frame(width: 16, height: 16)
+                                .rotationEffect(.degrees(180))
+                        }
+                        .foregroundStyle(AppColor.gray500)
+                        .contentShape(Rectangle().inset(by: -10))
                     }
-                    .foregroundStyle(AppColor.gray500)
-                    .contentShape(Rectangle().inset(by: -10))
+                    .buttonStyle(.plain)
+                    .accessibilityIdentifier(AccessibilityID.MyProfile.editButton)
                 }
-                .buttonStyle(.plain)
-                .accessibilityIdentifier(AccessibilityID.MyProfile.editButton)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
         }

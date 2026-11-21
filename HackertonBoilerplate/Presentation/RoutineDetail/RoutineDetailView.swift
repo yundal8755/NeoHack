@@ -178,7 +178,10 @@ struct RoutineDetailView: View {
 
     private func statistics(onComments: @escaping () -> Void) -> some View {
         HStack(spacing: AppSpacing.buttonPadding) {
-            Button { store.send(.likeTapped) } label: {
+            Button {
+                HapticFeedbackManager.shared.impact(style: store.state.isLiked ? .light : .medium)
+                store.send(.likeTapped)
+            } label: {
                 countLabel(store.state.isLiked && store.state.isLive ? "HomeHeartFilled" : "Heart", count: store.state.likeCount)
             }
             .disabled(store.state.isBusy)

@@ -7,6 +7,7 @@ struct HomeView: View {
     private let session: ProfileSession?
     @State private var isPickingRoutineImages = false
     @State private var navigationPath: [DetailRoute] = []
+    @State private var participationCompletedID: UUID?
     @State private var deletedRoutineID: String?
     @State private var isHomeDragging = false
     @State private var isSortExpanded = false
@@ -51,14 +52,19 @@ struct HomeView: View {
             .toolbar(.hidden, for: .navigationBar)
             .navigationDestination(for: DetailRoute.self) { route in
                 if let session {
-                    RoutineDetailDestination(id: route.id, session: session, onBack: closeDetail) {
+                    RoutineDetailDestination(id: route.id, session: session, resultParticipantID: route.participantID,
+                                             onParticipationCompleted: {
+                        closeDetail()
+                        participationCompletedID = UUID()
+                        isProfilePresented = true
+                    }, onBack: closeDetail) {
                         store.send(.removed(route.id))
                         deletedRoutineID = route.id
                     }
-                    .id(route.id)
+                    .id(route)
                 } else if let detail = route.preview {
                     RoutineDetailDestination(state: detail, onBack: closeDetail)
-                        .id(route.id)
+                        .id(route)
                 }
             }
         }
@@ -77,7 +83,7 @@ struct HomeView: View {
     private var profileView: some View {
         if let session {
             MyProfileView(
-                session: session, deletedRoutineID: deletedRoutineID, onRoutineSelected: showRoutine,
+                session: session, deletedRoutineID: deletedRoutineID, participationCompletedID: participationCompletedID, onRoutineSelected: showRoutine,
                 onBack: closeProfile)
         } else {
             #if DEBUG
@@ -99,7 +105,7 @@ struct HomeView: View {
 
     private func showRoutine(_ routine: HomeReducer.Routine) {
         guard navigationPath.isEmpty else { return }
-        navigationPath = [DetailRoute(id: routine.id, preview: session == nil ? routine.detail : nil)]
+        navigationPath = [DetailRoute(id: routine.id, participantID: routine.resultParticipantID, preview: session == nil ? routine.detail : nil)]
     }
 
     private var sortPicker: some View {
@@ -214,10 +220,11 @@ struct HomeView: View {
 
 private struct DetailRoute: Hashable {
     let id: String
+    var participantID: String? = nil
     var preview: RoutineDetailReducer.State? = nil
 
-    static func == (lhs: Self, rhs: Self) -> Bool { lhs.id == rhs.id }
-    func hash(into hasher: inout Hasher) { hasher.combine(id) }
+    static func == (lhs: Self, rhs: Self) -> Bool { lhs.id == rhs.id && lhs.participantID == rhs.participantID }
+    func hash(into hasher: inout Hasher) { hasher.combine(id); hasher.combine(participantID) }
 }
 
 #if DEBUG

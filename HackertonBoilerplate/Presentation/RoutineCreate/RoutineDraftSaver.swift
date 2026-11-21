@@ -13,6 +13,19 @@ final class RoutineDraftSaver {
     }
 
     func save(_ draft: RoutineDraft) async throws -> RoutineDetailEntity {
+        try await routines.create(input: input(draft))
+    }
+
+    func saveParticipation(_ draft: RoutineDraft, routineID: String, expectedSteps: Int) async throws -> RoutineInteractions {
+        guard draft.steps.count == expectedSteps, !draft.steps.isEmpty,
+              draft.steps.allSatisfy({ !$0.image.data.isEmpty }) else {
+            throw DataContractError.invalidValue("participation.cards")
+        }
+        let input = try await input(draft)
+        return try await routines.completeParticipation(id: routineID, input: input)
+    }
+
+    private func input(_ draft: RoutineDraft) async throws -> RoutineSaveInput {
         var cards: [RoutineCardEntity] = []
         for step in draft.steps {
             try Task.checkCancellation()
@@ -29,6 +42,6 @@ final class RoutineDraftSaver {
             cards.append(.init(imageID: id, title: step.title, content: step.content, time: step.time.formatted))
         }
         try Task.checkCancellation()
-        return try await routines.create(input: .init(title: draft.title, content: draft.introduction, cards: cards))
+        return .init(title: draft.title, content: draft.introduction, cards: cards)
     }
 }

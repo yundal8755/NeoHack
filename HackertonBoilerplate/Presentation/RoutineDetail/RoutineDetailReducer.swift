@@ -4,15 +4,17 @@ import MVICore
 nonisolated struct RoutineDetailReducer: Reducer {
     let id: String?
     let userID: String?
+    let resultParticipantID: String?
     let routines: (any RoutineRepository)?
     let comments: (any RoutineCommentRepository)?
 
     init(
-        id: String? = nil, userID: String? = nil, routines: (any RoutineRepository)? = nil,
+        id: String? = nil, userID: String? = nil, resultParticipantID: String? = nil, routines: (any RoutineRepository)? = nil,
         comments: (any RoutineCommentRepository)? = nil
     ) {
         self.id = id
         self.userID = userID
+        self.resultParticipantID = resultParticipantID
         self.routines = routines
         self.comments = comments
     }
@@ -51,6 +53,7 @@ nonisolated struct RoutineDetailReducer: Reducer {
 
     struct State: Equatable {
         var title: String
+        var introduction: String?
         var steps: [Step]
         var comments: [Comment]
         var isLiked = false
@@ -69,6 +72,7 @@ nonisolated struct RoutineDetailReducer: Reducer {
         var loaded = false
         var loadError: String?
         var isLive = false
+        var isParticipationResult = false
 
         init(
             title: String,
@@ -129,7 +133,13 @@ nonisolated struct RoutineDetailReducer: Reducer {
             state.loadError = nil
             return .run { send in
                 do {
-                    async let detail = routines.detail(id: id)
+                    if resultParticipantID != nil {
+                        let detail = try await fetchDetail(routines, id: id)
+                        await send(.loaded(detail, [], .init(likeCount: 0, likedByMe: false,
+                            inProgressCount: 0, completedCount: 0, participation: .completed)))
+                        return
+                    }
+                    async let detail = fetchDetail(routines, id: id)
                     async let thread = comments.list(routineID: id)
                     async let interactions = routines.interactions(id: id, change: nil)
                     try await send(.loaded(detail, thread, interactions))
@@ -139,7 +149,8 @@ nonisolated struct RoutineDetailReducer: Reducer {
             state.isLoading = false
             state.loaded = true
             state.title = detail.title
-            state.isOwner = userID.map { detail.owner?.id == $0 } ?? false
+            state.introduction = detail.content
+            state.isOwner = resultParticipantID == nil && (userID.map { detail.owner?.id == $0 } ?? false)
             state.steps = (detail.cards ?? []).enumerated().map { index, card in
                 Step(
                     id: card.id ?? "legacy-\(index)", time: card.time, title: card.title,
@@ -171,7 +182,8 @@ nonisolated struct RoutineDetailReducer: Reducer {
             return interaction(&state, state.isLiked ? .unlike : .like)
         case .participateTapped:
             guard !state.isOwner, state.participation != .completed else { return .none }
-            return interaction(&state, state.participation == .joined ? .complete : .join)
+            guard state.participation == .notJoined else { return .none }
+            return interaction(&state, .join)
         case .leaveTapped:
             guard state.participation == .joined else { return .none }
             return interaction(&state, .leave)
@@ -232,6 +244,13 @@ nonisolated struct RoutineDetailReducer: Reducer {
             state.notice = nil
         }
         return .none
+    }
+
+    private func fetchDetail(_ repository: any RoutineRepository, id: String) async throws -> RoutineDetailEntity {
+        if let resultParticipantID {
+            return try await repository.participationResult(id: id, participantID: resultParticipantID)
+        }
+        return try await repository.detail(id: id)
     }
 
     private func mutate(_ state: inout State, _ operation: @escaping () async throws -> Action) -> Effect<Action> {

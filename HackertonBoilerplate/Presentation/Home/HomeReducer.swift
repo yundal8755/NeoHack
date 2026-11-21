@@ -4,10 +4,12 @@ import MVICore
 nonisolated struct HomeReducer: Reducer {
     let repository: (any RoutineRepository)?
     let authorID: String?
+    let participantID: String?
 
-    init(repository: (any RoutineRepository)? = nil, authorID: String? = nil) {
+    init(repository: (any RoutineRepository)? = nil, authorID: String? = nil, participantID: String? = nil) {
         self.repository = repository
         self.authorID = authorID
+        self.participantID = participantID
     }
 
     struct Routine: Equatable, Identifiable {
@@ -19,7 +21,8 @@ nonisolated struct HomeReducer: Reducer {
         var thumbnailURL: URL? = nil
         var participantCount: Int? = nil
         var isServerRow = false
-        let detail: RoutineDetailReducer.State
+        var resultParticipantID: String? = nil
+        var detail: RoutineDetailReducer.State
 
         init(id: String, nickname: String, introduction: String, createdAt: Date?, detail: RoutineDetailReducer.State) {
             self.id = id
@@ -43,6 +46,7 @@ nonisolated struct HomeReducer: Reducer {
         var error: String?
         var cursor: String?
         var loaded = false
+        var totalCount: Int?
 
         init(routines: [Routine] = [], sort: Sort = .latest) {
             self.routines = routines
@@ -88,8 +92,12 @@ nonisolated struct HomeReducer: Reducer {
                 row.thumbnailURL = entity.thumbnailURL
                 row.participantCount = entity.participantCount.map(Int.init)
                 row.isServerRow = true
+                row.resultParticipantID = entity.participation == .completed ? participantID : nil
+                if entity.participation == .completed { row.detail.participation = .completed }
+                else if entity.participation == .joined { row.detail.participation = .joined }
                 return row
             }
+            state.totalCount = page.totalCount
             let previousCursor = state.cursor
             if !append { state.routines = [] }
             var ids = Set(state.routines.map(\.id))
@@ -119,11 +127,26 @@ nonisolated struct HomeReducer: Reducer {
             case .likes: .likes
             case .participation: .participants
             }
-        let query = RoutineListQuery(sort: sort, authorID: authorID, cursor: cursor)
+        let query = RoutineListQuery(sort: sort, authorID: authorID, participantID: participantID, cursor: cursor)
         return .run { send in
             do {
                 let page = try await repository.list(query: query)
-                await send(.received(page, append: cursor != nil))
+                var rows = page.routines ?? []
+                if let participantID {
+                    for index in rows.indices where rows[index].participation == .completed {
+                        try Task.checkCancellation()
+                        let source = rows[index]
+                        let result = try await repository.participationResult(id: source.id, participantID: participantID)
+                        rows[index] = RoutineSummaryEntity(
+                            id: source.id, title: result.title, content: result.content, owner: result.owner,
+                            thumbnailURL: result.cards?.first?.imageURL, cardCount: source.cardCount,
+                            likeCount: source.likeCount, participantCount: source.participantCount,
+                            createdAt: result.createdAt, participation: .completed)
+                    }
+                }
+                try Task.checkCancellation()
+                await send(.received(.init(routines: rows, size: page.size, hasNext: page.hasNext,
+                                          nextCursor: page.nextCursor, totalCount: page.totalCount), append: cursor != nil))
             } catch { await send(.failed(error.localizedDescription)) }
         }.cancelTask(id: "list")
     }

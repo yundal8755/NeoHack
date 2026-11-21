@@ -10,4 +10,5 @@ nonisolated struct RoutineSummaryEntity: Equatable, Sendable {
     let likeCount: Int64?
     let participantCount: Int64?
     let createdAt: Date?
+    var participation: RoutineInteractions.Participation? = nil
 }

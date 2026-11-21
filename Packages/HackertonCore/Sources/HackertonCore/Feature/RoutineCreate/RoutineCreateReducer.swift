@@ -29,6 +29,8 @@ public struct RoutineCreateReducer: Reducer {
         public var time: TimeOfDay
         public var title: String
         public var content: String
+        public var referenceImageURL: URL? = nil
+        public var requiresImageUpload = false
 
         public init(
             id: UUID = UUID(),
@@ -46,12 +48,12 @@ public struct RoutineCreateReducer: Reducer {
 
         /// 필수 항목(이미지·시간·제목)이 모두 올바른지. 이미지와 시간은 항상 들어 있다.
         public var isValid: Bool {
-            RoutineCreateReducer.stepTitleLength.contains(title.count)
+            !requiresImageUpload && RoutineCreateReducer.stepTitleLength.contains(title.trimmingCharacters(in: .whitespacesAndNewlines).count)
                 && content.count <= RoutineCreateReducer.stepContentMaxLength
         }
 
         var hasInput: Bool {
-            !title.isEmpty || !content.isEmpty
+            !title.isEmpty || !content.isEmpty || (referenceImageURL != nil && !requiresImageUpload)
         }
     }
 
@@ -118,7 +120,7 @@ public struct RoutineCreateReducer: Reducer {
         }
 
         public var isCompleteEnabled: Bool {
-            RoutineCreateReducer.routineTitleLength.contains(routineTitle.count)
+            RoutineCreateReducer.routineTitleLength.contains(routineTitle.trimmingCharacters(in: .whitespacesAndNewlines).count)
                 && routineIntroduction.count <= RoutineCreateReducer.routineIntroductionMaxLength
                 && steps.allSatisfy(\.isValid)
         }
@@ -150,7 +152,10 @@ public struct RoutineCreateReducer: Reducer {
     public func reduce(_ state: inout State, with action: Action) -> Effect<Action> {
         switch action {
         case let .stepImageReplaced(image):
-            updateCurrentStep(&state) { $0.image = image }
+            updateCurrentStep(&state) {
+                $0.image = image
+                $0.requiresImageUpload = false
+            }
 
         case .timeTapped:
             if state.currentStep != nil {

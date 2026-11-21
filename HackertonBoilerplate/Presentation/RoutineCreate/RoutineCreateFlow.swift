@@ -171,7 +171,7 @@ private struct RoutineCreateEntry: View {
 
                 steps.append(RoutineCreateReducer.Step(
                     image: RoutineImage(data: resized),
-                    time: timeOfDay(from: capturedAt ?? Date())
+                    time: RoutineCreateView.timeOfDay(from: capturedAt ?? Date())
                 ))
             } catch {
                 AppLogger.error("루틴 사진을 불러오지 못했어요: \(error)")
@@ -180,9 +180,4 @@ private struct RoutineCreateEntry: View {
         return steps
     }
 
-    private static func timeOfDay(from date: Date) -> TimeOfDay {
-        let components = Calendar.current.dateComponents([.hour, .minute], from: date)
-        return TimeOfDay(hour: components.hour ?? 0, minute: components.minute ?? 0)
-            .flooringMinute(toMultipleOf: TimePickerSheet.minuteStep)
-    }
 }

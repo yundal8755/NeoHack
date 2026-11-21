@@ -9,6 +9,7 @@ nonisolated struct RoutineListQuery: Equatable, Sendable {
     enum Sort: String, Sendable { case latest, likes, participants }
     var sort: Sort = .latest
     var authorID: String? = nil
+    var participantID: String? = nil
     var cursor: String? = nil
     var size: Int = 20
 }

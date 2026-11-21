@@ -1,3 +1,5 @@
+import Foundation
+
 nonisolated enum RoutineMapper {
     static func request(_ input: RoutineSaveInput) -> RoutineSaveRequestDTO {
         RoutineSaveRequestDTO(
@@ -36,7 +38,8 @@ nonisolated enum RoutineMapper {
             content: dto.content, owner: dto.owner.map(owner),
             thumbnailURL: Mapping.url(dto.thumbnailUrl, "thumbnailUrl"), cardCount: dto.cardCount,
             likeCount: dto.likeCount, participantCount: dto.participantCount,
-            createdAt: Mapping.date(dto.createdAt, "createdAt"))
+            createdAt: Mapping.date(dto.createdAt, "createdAt"),
+            participation: dto.myParticipationStatus.flatMap(RoutineInteractions.Participation.init(rawValue:)))
     }
     static func interactions(_ dto: RoutineInteractionsResponseDTO) throws -> RoutineInteractions {
         let status = try Mapping.required(dto.myParticipationStatus, "myParticipationStatus")
@@ -50,9 +53,25 @@ nonisolated enum RoutineMapper {
             completedCount: Mapping.required(dto.completedCount, "completedCount"),
             participation: participation)
     }
+    static func participationResult(_ dto: ParticipationResultResponseDTO) throws -> RoutineDetailEntity {
+        let work = try Mapping.required(dto.work, "work")
+        let cards = try Mapping.required(work.cards, "work.cards").enumerated().map { index, value in
+            let card = try Mapping.required(value, "work.cards[\(index)]")
+            let imageID = try Mapping.identity(card.imageId, "imageId")
+            return try RoutineCardEntity(
+                id: "step-\(index)", order: index,
+                imageURL: ImageEndpoint.data(id: imageID).asURLRequest().url,
+                imageID: imageID, title: Mapping.required(card.title, "card.title"),
+                content: card.content, time: Mapping.required(card.time, "time"))
+        }
+        return try RoutineDetailEntity(
+            id: Mapping.identity(dto.routineId, "routineId"), title: Mapping.required(work.title, "work.title"),
+            content: work.content, owner: dto.participant.map(owner), cards: cards,
+            likeCount: nil, commentCount: nil, createdAt: Mapping.date(dto.completedAt, "completedAt"), updatedAt: nil)
+    }
     static func page(_ dto: RoutinePageResponseDTO) throws -> RoutinePageEntity {
         try RoutinePageEntity(
             routines: dto.routines.map { try $0.map(summary) }, size: dto.size, hasNext: dto.hasNext,
-            nextCursor: dto.nextCursor)
+            nextCursor: dto.nextCursor, totalCount: dto.totalCount)
     }
 }

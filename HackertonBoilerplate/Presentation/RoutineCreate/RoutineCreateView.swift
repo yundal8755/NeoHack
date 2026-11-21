@@ -9,8 +9,10 @@ struct RoutineCreateView: View {
     typealias Feature = RoutineCreateReducer
 
     @StateObject private var store: StoreOf<Feature>
+    private let isParticipation: Bool
     private let onFinish: (Feature.Outcome) -> Void
 
+    @State private var imageError: FeedbackMessage?
     @State private var replacingImageItem: PhotosPickerItem?
     @FocusState private var focusedField: Field?
 
@@ -21,9 +23,10 @@ struct RoutineCreateView: View {
         case routineIntroduction
     }
 
-    init(store: StoreOf<Feature>, onFinish: @escaping (Feature.Outcome) -> Void = { _ in }) {
+    init(store: StoreOf<Feature>, isParticipation: Bool = false, onFinish: @escaping (Feature.Outcome) -> Void = { _ in }) {
         _store = StateObject(wrappedValue: store)
         self.onFinish = onFinish
+        self.isParticipation = isParticipation
     }
 
     private var state: Feature.State { store.state }
@@ -32,7 +35,7 @@ struct RoutineCreateView: View {
         // 스크롤 영역만 키보드를 피하고, 하단 버튼은 키보드를 따라 올라오지 않도록 키보드 영역을 무시한다.
         ZStack(alignment: .bottom) {
             VStack(spacing: 0) {
-                AppTopBar("루틴 만들기", trailing: .exit { store.send(.exitTapped) })
+                AppTopBar(isParticipation ? "루틴 따라하기" : "루틴 만들기", trailing: .exit { store.send(.exitTapped) })
 
                 ScrollView {
                     VStack(spacing: 0) {
@@ -75,6 +78,7 @@ struct RoutineCreateView: View {
                 .accessibilityIdentifier(AccessibilityID.RoutineCreate.dismissKeyboardButton)
             }
         }
+        .feedbackPopup($imageError)
         .onChange(of: state.page) { _, _ in
             focusedField = nil
         }
@@ -114,15 +118,28 @@ struct RoutineCreateView: View {
     private func stepForm(_ step: Feature.Step) -> some View {
         VStack(alignment: .leading, spacing: AppSpacing.md) {
             PhotosPicker(selection: $replacingImageItem, matching: .images, photoLibrary: .shared()) {
-                RoutineImageView(image: step.image)
+                ZStack {
+                    if step.requiresImageUpload {
+                        NetworkImageView(url: step.referenceImageURL, borderColor: nil, showsLoadingText: false)
+                            .opacity(0.25)
+                        VStack(spacing: AppSpacing.xs) {
+                            Image(systemName: "camera.fill").font(.title2)
+                            Text("내 사진을 올려주세요").appFont(AppFont.body2)
+                            Text("배경 사진은 참고용이에요").appFont(AppFont.caption1)
+                        }
+                        .foregroundStyle(AppColor.textPrimary)
+                    } else {
+                        RoutineImageView(image: step.image)
+                    }
+                }
                     .frame(maxWidth: .infinity)
-                    .frame(height: Self.imageHeight)
+                    .aspectRatio(16.0 / 9.0, contentMode: .fit)
                     .clipShape(RoundedRectangle(cornerRadius: AppRadius.button, style: .continuous))
                     .contentShape(RoundedRectangle(cornerRadius: AppRadius.button, style: .continuous))
             }
             .buttonStyle(.plain)
             .accessibilityLabel(Text(verbatim: "스텝 이미지"))
-            .accessibilityHint(Text(verbatim: "다른 이미지로 바꿉니다"))
+            .accessibilityHint(Text(verbatim: step.requiresImageUpload ? "내 사진을 필수로 선택합니다" : "다른 이미지로 바꿉니다"))
             .accessibilityIdentifier(AccessibilityID.RoutineCreate.stepImage)
 
             HStack(spacing: AppSpacing.inlineLabelGap) {
@@ -223,12 +240,28 @@ struct RoutineCreateView: View {
                 guard
                     let data = try await item.loadTransferable(type: Data.self),
                     let resized = await Self.resize(data)
-                else { return }
+                else {
+                    imageError = FeedbackMessage(kind: .error, title: "사진을 불러오지 못했어요", message: "다른 사진을 선택해 주세요.")
+                    return
+                }
                 store.send(.stepImageReplaced(RoutineImage(data: resized)))
+                if isParticipation {
+                    let capturedAt = await Task.detached(priority: .userInitiated) {
+                        ImageDownsampler.capturedDate(of: data)
+                    }.value
+                    store.send(.timeSelected(Self.timeOfDay(from: capturedAt ?? Date())))
+                }
             } catch {
+                imageError = FeedbackMessage(kind: .error, title: "사진을 불러오지 못했어요", message: "다시 선택해 주세요.")
                 AppLogger.error("스텝 이미지를 불러오지 못했어요: \(error)")
             }
         }
+    }
+
+    static func timeOfDay(from date: Date) -> TimeOfDay {
+        let components = Calendar.current.dateComponents([.hour, .minute], from: date)
+        return TimeOfDay(hour: components.hour ?? 0, minute: components.minute ?? 0)
+            .flooringMinute(toMultipleOf: TimePickerSheet.minuteStep)
     }
 
     private static func resize(_ data: Data) async -> Data? {

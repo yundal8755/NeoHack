@@ -10,4 +10,5 @@ nonisolated struct RoutineSummaryResponseDTO: Decodable, Equatable, Sendable {
     let likeCount: Int64?
     let participantCount: Int64?
     let createdAt: String?
+    var myParticipationStatus: String? = nil
 }

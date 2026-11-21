@@ -5,6 +5,8 @@ import SwiftUI
 
 struct MyProfileView: View {
     @StateObject private var store: StoreOf<MyProfileReducer>
+    @StateObject private var participating: StoreOf<HomeReducer>
+    private let participationCompletedID: UUID?
     @StateObject private var mine: StoreOf<HomeReducer>
     private let session: ProfileSession?
     private let onBack: () -> Void
@@ -21,11 +23,13 @@ struct MyProfileView: View {
         self.onBack = onBack
         self.onRoutineSelected = onRoutineSelected
         deletedRoutineID = nil
+        participationCompletedID = nil
+        _participating = StateObject(wrappedValue: StoreOf<HomeReducer>(state: .init(), reducer: HomeReducer()))
         session = nil
     }
 
     init(
-        session: ProfileSession, deletedRoutineID: String?,
+        session: ProfileSession, deletedRoutineID: String?, participationCompletedID: UUID? = nil,
         onRoutineSelected: @escaping (HomeReducer.Routine) -> Void, onBack: @escaping () -> Void
     ) {
         _store = StateObject(
@@ -36,6 +40,9 @@ struct MyProfileView: View {
             wrappedValue: StoreOf<HomeReducer>(
                 state: .init(),
                 reducer: HomeReducer(repository: session.repositories.routines, authorID: session.profile.id)))
+        _participating = StateObject(wrappedValue: StoreOf<HomeReducer>(
+            state: .init(), reducer: HomeReducer(repository: session.repositories.routines, participantID: session.profile.id)))
+        self.participationCompletedID = participationCompletedID
         self.session = session
         self.deletedRoutineID = deletedRoutineID
         self.onRoutineSelected = onRoutineSelected
@@ -43,7 +50,11 @@ struct MyProfileView: View {
     }
 
     private var visibleRoutines: [HomeReducer.Routine] {
-        session == nil ? store.state.visibleRoutines : mine.state.routines
+        session == nil ? store.state.visibleRoutines : activeList.state.routines
+    }
+
+    private var activeList: StoreOf<HomeReducer> {
+        store.state.selectedTab == .mine ? mine : participating
     }
 
     var body: some View {
@@ -54,22 +65,20 @@ struct MyProfileView: View {
                     profileHeader
                     HStack(spacing: AppSpacing.sm) {
                         tab(
-                            session == nil ? "내 루틴 (\(store.state.myRoutines.count))" : "내 루틴",
+                            session == nil ? "내 루틴 (\(store.state.myRoutines.count))" : tabTitle("내 루틴", count: mine.state.totalCount),
                             selection: .mine, id: AccessibilityID.MyProfile.myRoutinesTab)
-                        if session == nil {
-                            tab(
-                                "참여 루틴 (\(store.state.participatingRoutines.count))",
-                                selection: .participating, id: AccessibilityID.MyProfile.participatingTab)
-                        }
+                        tab(
+                            session == nil ? "참여 루틴 (\(store.state.participatingRoutines.count))" : tabTitle("참여 루틴", count: participating.state.totalCount),
+                            selection: .participating, id: AccessibilityID.MyProfile.participatingTab)
                     }
                     .padding(.vertical, AppSpacing.xs)
 
                     LazyVStack(spacing: 0) {
-                        if mine.state.isLoading && visibleRoutines.isEmpty {
+                        if activeList.state.isLoading && visibleRoutines.isEmpty {
                             ProgressView().padding()
-                        } else if let message = mine.state.error {
-                            ErrorView(title: "내 루틴을 불러오지 못했어요", message: message, retryTitle: "다시 시도") {
-                                mine.send(.refresh)
+                        } else if let message = activeList.state.error {
+                            ErrorView(title: "루틴을 불러오지 못했어요", message: message, retryTitle: "다시 시도") {
+                                activeList.send(.refresh)
                             }
                         } else if visibleRoutines.isEmpty {
                             EmptyView(
@@ -87,18 +96,32 @@ struct MyProfileView: View {
                             }
                             .buttonStyle(.plain)
                             .accessibilityIdentifier("myProfile.routine.\(routine.id)")
-                            .onAppear { mine.send(.nextPage(routine.id)) }
+                            .onAppear { activeList.send(.nextPage(routine.id)) }
                         }
                     }
                 }
                 .padding(.horizontal, AppSpacing.md)
             }
         }
+        .refreshable {
+            activeList.send(.refresh)
+            while activeList.state.isLoading && !Task.isCancelled {
+                try? await Task.sleep(for: .milliseconds(50))
+            }
+        }
         .background(AppColor.background)
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier(AccessibilityID.MyProfile.screen)
         .toolbar(.hidden, for: .navigationBar)
-        .task { mine.send(.appeared) }
+        .task(id: participationCompletedID) {
+            mine.send(.appeared)
+            if participationCompletedID != nil {
+                store.send(.tabSelected(.participating))
+                participating.send(.refresh)
+            } else {
+                participating.send(.appeared)
+            }
+        }
         .onChange(of: deletedRoutineID) { _, id in
             if let id { mine.send(.removed(id)) }
         }
@@ -165,6 +188,10 @@ struct MyProfileView: View {
             .frame(maxWidth: .infinity, alignment: .leading)
         }
         .padding(.vertical, AppSpacing.lg)
+    }
+
+    private func tabTitle(_ title: String, count: Int?) -> String {
+        count.map { "\(title) (\($0))" } ?? title
     }
 
     private func tab(_ title: String, selection: MyProfileReducer.Tab, id: String) -> some View {

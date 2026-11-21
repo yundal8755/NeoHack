@@ -2,12 +2,13 @@ import Alamofire
 import Foundation
 
 nonisolated enum RoutineEndpoint {
-    static func list(query: RoutineListQuery) throws -> APIEndpoint {
+    static func list(query: RoutineListQuery, headers: [String: String] = [:]) throws -> APIEndpoint {
         guard (1...50).contains(query.size) else { throw DataContractError.invalidValue("size") }
         var parameters: Parameters = ["sort": query.sort.rawValue, "size": query.size]
         if let authorID = query.authorID { parameters["authorId"] = try Mapping.pathID(authorID) }
+        if let participantID = query.participantID { parameters["participantId"] = try Mapping.pathID(participantID) }
         if let cursor = query.cursor { parameters["cursor"] = cursor }
-        return APIEndpoint(method: .get, path: "api/routines", parameters: parameters)
+        return APIEndpoint(method: .get, path: "api/routines", headers: headers, parameters: parameters)
     }
     static func detail(id: String) throws -> APIEndpoint {
         APIEndpoint(method: .get, path: "api/routines/\(try Mapping.pathID(id))")
@@ -40,6 +41,15 @@ nonisolated enum RoutineEndpoint {
         case .complete: (.put, "participation/completion")
         }
         return APIEndpoint(method: route.0, path: "api/routines/\(try Mapping.pathID(id))/\(route.1)", headers: headers)
+    }
+    static func completeParticipation(id: String, input: RoutineSaveInput, headers: [String: String]) throws -> APIEndpoint {
+        _ = try save(input: input, headers: headers)
+        return try APIEndpoint(method: .put, path: "api/routines/\(Mapping.pathID(id))/participation/completion",
+                               headers: headers, body: RoutineMapper.request(input))
+    }
+    static func participationResult(id: String, participantID: String) throws -> APIEndpoint {
+        try APIEndpoint(method: .get,
+                        path: "api/routines/\(Mapping.pathID(id))/participation-results/\(Mapping.pathID(participantID))")
     }
     static func delete(id: String, headers: [String: String]) throws -> APIEndpoint {
         APIEndpoint(method: .delete, path: "api/routines/\(try Mapping.pathID(id))", headers: headers)

@@ -8,6 +8,10 @@ struct RoutineDetailView: View {
     @State private var isDeleteRoutinePresented = false
     @State private var isRoutineMenuPresented = false
     @State private var isCommentsPresented = false
+    @State private var isParticipationPresented = false
+    private let session: ProfileSession?
+    private let routineID: String?
+    private let onParticipationCompleted: () -> Void
     @State private var feedbackID = UUID()
     @Environment(\.dismiss) private var dismiss
     @FocusState private var isCommentFocused: Bool
@@ -15,8 +19,11 @@ struct RoutineDetailView: View {
     private let onBack: (() -> Void)?
     private let onDelete: () -> Void
 
-    init(store: StoreOf<RoutineDetailReducer>, onBack: (() -> Void)? = nil, onDelete: @escaping () -> Void = {}) {
+    init(store: StoreOf<RoutineDetailReducer>, session: ProfileSession? = nil, routineID: String? = nil, onParticipationCompleted: @escaping () -> Void = {}, onBack: (() -> Void)? = nil, onDelete: @escaping () -> Void = {}) {
         self.store = store
+        self.session = session
+        self.routineID = routineID
+        self.onParticipationCompleted = onParticipationCompleted
         self.onBack = onBack
         self.onDelete = onDelete
     }
@@ -41,49 +48,59 @@ struct RoutineDetailView: View {
                 ScrollViewReader { proxy in
                     ScrollView {
                         VStack(alignment: .leading, spacing: 0) {
+                            if store.state.isParticipationResult, let introduction = store.state.introduction,
+                               !introduction.isEmpty {
+                                Text(introduction)
+                                    .appFont(AppFont.caption1)
+                                    .foregroundStyle(AppColor.textSecondary)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                    .padding(.top, AppSpacing.md)
+                            }
                             ForEach(Array(store.state.steps.enumerated()), id: \.element.id) { index, step in
                                 stepCard(step, number: index + 1)
                             }
 
-                            ViewThatFits(in: .horizontal) {
-                                HStack(spacing: AppSpacing.md) {
-                                    statistics {
-                                        withAnimation { proxy.scrollTo("commentPreviewEnd", anchor: .bottom) }
+                            if !store.state.isParticipationResult {
+                                ViewThatFits(in: .horizontal) {
+                                    HStack(spacing: AppSpacing.md) {
+                                        statistics {
+                                            withAnimation { proxy.scrollTo("commentPreviewEnd", anchor: .bottom) }
+                                        }
+                                        Spacer(minLength: 0)
+                                        participateButton
+                                            .frame(width: 130)
                                     }
-                                    Spacer(minLength: 0)
-                                    participateButton
-                                        .frame(width: 130)
-                                }
-                                VStack(alignment: .leading, spacing: AppSpacing.xs) {
-                                    statistics {
-                                        withAnimation { proxy.scrollTo("commentPreviewEnd", anchor: .bottom) }
+                                    VStack(alignment: .leading, spacing: AppSpacing.xs) {
+                                        statistics {
+                                            withAnimation { proxy.scrollTo("commentPreviewEnd", anchor: .bottom) }
+                                        }
+                                        participateButton
+                                            .frame(width: 130)
                                     }
-                                    participateButton
-                                        .frame(width: 130)
                                 }
-                            }
-                            .padding(.top, AppSpacing.xs)
-                            .padding(.bottom, AppSpacing.xxs)
+                                .padding(.top, AppSpacing.xs)
+                                .padding(.bottom, AppSpacing.xxs)
 
-                            VStack(spacing: AppSpacing.xxs) {
-                                ForEach(Array(store.state.comments.prefix(5))) { comment in
-                                    commentRow(comment, showsActions: false)
+                                VStack(spacing: AppSpacing.xxs) {
+                                    ForEach(Array(store.state.comments.prefix(5))) { comment in
+                                        commentRow(comment, showsActions: false)
+                                    }
                                 }
-                            }
 
-                            Button {
-                                isCommentsPresented = true
-                            } label: {
-                                Text("댓글 전체보기")
-                                    .appFont(AppFont.caption1)
-                                    .foregroundStyle(AppColor.textSecondary)
-                                    .frame(maxWidth: .infinity, minHeight: 44)
-                                    .contentShape(Rectangle())
+                                Button {
+                                    isCommentsPresented = true
+                                } label: {
+                                    Text("댓글 전체보기")
+                                        .appFont(AppFont.caption1)
+                                        .foregroundStyle(AppColor.textSecondary)
+                                        .frame(maxWidth: .infinity, minHeight: 44)
+                                        .contentShape(Rectangle())
+                                }
+                                .buttonStyle(.plain)
+                                .accessibilityIdentifier(AccessibilityID.RoutineDetail.allCommentsButton)
+                                .padding(.bottom, AppSpacing.md)
+                                .id("commentPreviewEnd")
                             }
-                            .buttonStyle(.plain)
-                            .accessibilityIdentifier(AccessibilityID.RoutineDetail.allCommentsButton)
-                            .padding(.bottom, AppSpacing.md)
-                            .id("commentPreviewEnd")
 
                         }
                         .padding(.horizontal, AppSpacing.md)
@@ -109,6 +126,20 @@ struct RoutineDetailView: View {
             if deleted {
                 onDelete()
                 closeDetail()
+            }
+        }
+        .fullScreenCover(isPresented: $isParticipationPresented, onDismiss: {
+            if store.state.participation == .completed { onParticipationCompleted() }
+            else { store.send(.load) }
+        }) {
+            if let session, let routineID {
+                RoutineParticipationView(routineID: routineID, steps: store.state.steps,
+                                         participation: store.state.participation, repositories: session.repositories) {
+                    store.send(.interactionUpdated($0))
+                    isParticipationPresented = false
+                } onCancel: {
+                    isParticipationPresented = false
+                }
             }
         }
         .sheet(isPresented: $isCommentsPresented) {
@@ -216,19 +247,19 @@ struct RoutineDetailView: View {
 
     @ViewBuilder
     private var participateButton: some View {
-        if !store.state.isLive || !store.state.isOwner {
-            if store.state.isLive && store.state.participation == .joined {
-                VStack(spacing: AppSpacing.xxs) {
-                    PrimaryButton("참여 완료") { store.send(.participateTapped) }
-                        .accessibilityIdentifier(AccessibilityID.RoutineDetail.participateButton)
-                    Button("참여 취소") { store.send(.leaveTapped) }
-                        .font(.footnote)
+        if !store.state.isOwner && !store.state.isParticipationResult {
+            VStack(spacing: AppSpacing.xxs) {
+                PrimaryButton(store.state.participation == .joined ? "참여 기록 작성" : store.state.participation.rawValue) {
+                    if session != nil { isParticipationPresented = true }
+                    else { store.send(.participateTapped) }
                 }
-                .disabled(store.state.isBusy)
-            } else {
-                PrimaryButton(store.state.participation.rawValue) { store.send(.participateTapped) }
-                    .disabled(store.state.participation == .completed || store.state.isBusy)
-                    .accessibilityIdentifier(AccessibilityID.RoutineDetail.participateButton)
+                .disabled(store.state.participation == .completed || store.state.isBusy || store.state.steps.isEmpty)
+                .accessibilityIdentifier(AccessibilityID.RoutineDetail.participateButton)
+                if store.state.participation == .joined {
+                    Button("참여 취소") { store.send(.leaveTapped) }
+                        .appFont(AppFont.caption1)
+                        .disabled(store.state.isBusy)
+                }
             }
         }
     }
@@ -315,13 +346,31 @@ struct RoutineDetailView: View {
     private var commentsSheet: some View {
         NavigationStack {
             VStack(spacing: 0) {
-                AppTopBar(
-                    "댓글 \(store.state.commentCount)",
-                    trailing: .icon("xmark", label: "댓글 닫기") {
-                        isCommentFocused = false
-                        isCommentsPresented = false
+                ZStack {
+                    Text("댓글 \(store.state.commentCount)")
+                        .appFont(AppFont.body2.weight(.semiBold))
+                        .accessibilityAddTraits(.isHeader)
+                    HStack {
+                        Spacer()
+                        Button {
+                            isCommentFocused = false
+                            isCommentsPresented = false
+                        } label: {
+                            Image(systemName: "xmark")
+                                .font(.system(size: 16, weight: .medium))
+                                .frame(width: 44, height: 44)
+                                .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel("댓글 닫기")
+                        .accessibilityIdentifier(AccessibilityID.TopBar.trailingButton)
                     }
-                )
+                }
+                .foregroundStyle(AppColor.textPrimary)
+                .frame(height: 44)
+                .padding(.horizontal, AppSpacing.sm)
+                .padding(.top, AppSpacing.lg)
+                .padding(.bottom, AppSpacing.xs)
                 ScrollViewReader { proxy in
                     if #available(iOS 26.0, *) {
                         commentsScroll(proxy: proxy).scrollEdgeEffectHidden()

@@ -10,13 +10,20 @@ struct RoutineListRow: View {
             VStack(alignment: .leading, spacing: 0) {
                 HStack(alignment: .center, spacing: AppSpacing.xs) {
                     ProfileAvatar(url: routine.avatarURL, size: 35)
-                    HStack(alignment: .firstTextBaseline, spacing: AppSpacing.xs) {
-                        authorName(routine.nickname)
-                            .lineLimit(1)
-                            .layoutPriority(1)
-                        createdDate(routine.createdAt)
-                            .lineLimit(1)
-                            .minimumScaleFactor(0.85)
+                    ViewThatFits(in: .horizontal) {
+                        HStack(alignment: .firstTextBaseline, spacing: AppSpacing.xs) {
+                            authorName(routine.nickname)
+                            if let date = routine.createdAt { createdDate(date) }
+                        }
+                        .fixedSize(horizontal: true, vertical: false)
+                        VStack(alignment: .leading, spacing: AppSpacing.xxxs) {
+                            authorName(routine.nickname).lineLimit(1)
+                            if let date = routine.createdAt {
+                                createdDate(date)
+                                    .lineLimit(1)
+                                    .minimumScaleFactor(0.85)
+                            }
+                        }
                     }
                 }
                 .padding(.vertical, AppSpacing.xxs)
@@ -54,14 +61,15 @@ struct RoutineListRow: View {
                 if let url = routine.thumbnailURL ?? routine.detail.steps.first?.imageURL {
                     NetworkImageView(
                         url: url, cornerRadius: AppRadius.button,
-                        downsamplingSize: CGSize(width: 115, height: 115),
+                        downsamplingSize: CGSize(width: 115, height: 115 * 9.0 / 16.0),
                         accessibilityLabel: "루틴 대표 이미지", borderColor: nil, showsLoadingText: false
                     )
                 } else {
                     RoundedRectangle(cornerRadius: AppRadius.button).fill(AppColor.gray400)
                 }
             }
-            .frame(width: 115, height: 115)
+            .frame(width: 115, height: 115 * 9.0 / 16.0)
+            .clipShape(RoundedRectangle(cornerRadius: AppRadius.button))
         }
         .padding(.vertical, AppSpacing.md)
         .contentShape(Rectangle())

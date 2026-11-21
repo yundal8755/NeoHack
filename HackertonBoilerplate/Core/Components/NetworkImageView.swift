@@ -107,10 +107,12 @@ struct NetworkImageView: View {
             image = image.downsampling(size: downsamplingSize)
         }
 
-        return image
-            .aspectRatio(contentMode: contentMode)
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .clipped()
+        return GeometryReader { geometry in
+            image
+                .aspectRatio(contentMode: contentMode)
+                .frame(width: geometry.size.width, height: geometry.size.height)
+                .clipped()
+        }
     }
 
     @ViewBuilder

@@ -52,12 +52,14 @@ struct RoutineDetailView: View {
                                     }
                                     Spacer(minLength: 0)
                                     participateButton
+                                        .frame(width: 130)
                                 }
                                 VStack(alignment: .leading, spacing: AppSpacing.xs) {
                                     statistics {
                                         withAnimation { proxy.scrollTo("commentPreviewEnd", anchor: .bottom) }
                                     }
                                     participateButton
+                                        .frame(width: 130)
                                 }
                             }
                             .padding(.top, AppSpacing.xs)
@@ -154,7 +156,8 @@ struct RoutineDetailView: View {
                         .accessibilityLabel("\(number)단계 이미지 없음")
                 }
             }
-            .aspectRatio(370.0 / 187.0, contentMode: .fit)
+            .aspectRatio(16.0 / 9.0, contentMode: .fit)
+            .clipShape(RoundedRectangle(cornerRadius: AppRadius.button))
 
             VStack(alignment: .leading, spacing: AppSpacing.xxs) {
                 HStack(alignment: .top, spacing: AppSpacing.sm) {
@@ -311,11 +314,20 @@ struct RoutineDetailView: View {
 
     private var commentsSheet: some View {
         NavigationStack {
-            ScrollViewReader { proxy in
-                if #available(iOS 26.0, *) {
-                    commentsScroll(proxy: proxy).scrollEdgeEffectHidden()
-                } else {
-                    commentsScroll(proxy: proxy)
+            VStack(spacing: 0) {
+                AppTopBar(
+                    "댓글 \(store.state.commentCount)",
+                    trailing: .icon("xmark", label: "댓글 닫기") {
+                        isCommentFocused = false
+                        isCommentsPresented = false
+                    }
+                )
+                ScrollViewReader { proxy in
+                    if #available(iOS 26.0, *) {
+                        commentsScroll(proxy: proxy).scrollEdgeEffectHidden()
+                    } else {
+                        commentsScroll(proxy: proxy)
+                    }
                 }
             }
             .alert("정말로 댓글을 삭제하시겠습니까?", isPresented: Binding(
@@ -329,15 +341,7 @@ struct RoutineDetailView: View {
                 }
             }
             .background(AppColor.background)
-            .toolbarBackground(AppColor.background, for: .navigationBar)
-            .toolbarBackground(.visible, for: .navigationBar)
-            .navigationTitle("댓글 \(store.state.commentCount)")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
-                    Button("닫기") { isCommentsPresented = false }
-                }
-            }
+            .toolbar(.hidden, for: .navigationBar)
         }
     }
 

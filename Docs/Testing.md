@@ -6,37 +6,37 @@ MVI의 세 부분을 나눠 검증한다. 공통 MVI와 폼 검증은 로컬 패
 
 | 계층 | 검증 대상 | 도구 | 위치 | 실행 |
 | --- | --- | --- | --- | --- |
-| 새 Data·Domain | DTO, Mapper, Entity, Endpoint, Repository·multipart·오류 | Swift Testing + URLProtocol | `HackertonBoilerplateSnapshotTests/DataDomain` | `scripts/test.sh app -only-testing:HackertonBoilerplateSnapshotTests/DataDomainTests` |
-| Reducer State 전이 | `reduce(&state, action)` 후의 State | Swift Testing | `Packages/HackertonCore/Tests` | `scripts/test.sh` |
-| Reducer Effect | Effect → Mock Repository → 되돌아오는 Action | Swift Testing + `ReducerTester` | `Packages/HackertonCore/Tests` | `scripts/test.sh` |
-| 화면 렌더링 | State별 화면, 공통 컴포넌트 | swift-snapshot-testing | `HackertonBoilerplateSnapshotTests` | `scripts/test.sh app` |
-| 핵심 흐름 | 로그인 등 실제 화면 이동 | XCUITest + 목 모드 | `HackertonBoilerplateUITests` | `scripts/test.sh app` |
+| 새 Data·Domain | DTO, Mapper, Entity, Endpoint, Repository·multipart·오류 | Swift Testing + URLProtocol | `RoufSnapshotTests/DataDomain` | `scripts/test.sh app -only-testing:RoufSnapshotTests/DataDomainTests` |
+| Reducer State 전이 | `reduce(&state, action)` 후의 State | Swift Testing | `Packages/RoufCore/Tests` | `scripts/test.sh` |
+| Reducer Effect | Effect → Mock Repository → 되돌아오는 Action | Swift Testing + `ReducerTester` | `Packages/RoufCore/Tests` | `scripts/test.sh` |
+| 화면 렌더링 | State별 화면, 공통 컴포넌트 | swift-snapshot-testing | `RoufSnapshotTests` | `scripts/test.sh app` |
+| 핵심 흐름 | 로그인 등 실제 화면 이동 | XCUITest + 목 모드 | `RoufUITests` | `scripts/test.sh app` |
 
 ## 코드 위치
 
 ```text
-Packages/HackertonCore/
+Packages/RoufCore/
   Sources/
     MVICore/                  Reducer, Effect, Store
-    HackertonCore/
+    RoufCore/
       Domain/                 기존 TokenStoring
       DataModel/Example/      기존 Example DTO (새 서비스 범위 제외)
       Feature/<Feature>/      <Feature>Reducer (State, Action 내부 정의)
       App/                    AppLaunchConfiguration (목 모드 실행 인자)
       AccessibilityID.swift   View와 UI 테스트가 함께 쓰는 식별자
-    HackertonMocks/           Mock Repository, InMemoryTokenStore (테스트와 앱 목 모드에서 사용)
+    RoufMocks/           Mock Repository, InMemoryTokenStore (테스트와 앱 목 모드에서 사용)
     MVITestSupport/           ReducerTester, unimplemented (테스트 전용)
   Tests/
     MVICoreTests/
-    HackertonCoreTests/<Feature>/
+    RoufCoreTests/<Feature>/
 
-HackertonBoilerplate/
+Rouf/
   Domain/<DomainName>/                Entity, Input, Repository protocol
   Data/<DomainName>/                  DTO/Request, DTO/Response, Mapper, Endpoint, RepositoryImpl
   App/, Core/, Presentation/         기존 앱 기반·화면
-HackertonBoilerplateSnapshotTests/     스냅샷 테스트와 __Snapshots__ 기준 이미지
+RoufSnapshotTests/     스냅샷 테스트와 __Snapshots__ 기준 이미지
   DataDomain/                          앱 Data·Domain의 Swift Testing (스냅샷 아님)
-HackertonBoilerplateUITests/
+RoufUITests/
   Screens/                             화면 조작 객체
   Flows/                               흐름 테스트
 ```
@@ -45,7 +45,7 @@ HackertonBoilerplateUITests/
 
 ## Reducer 테스트
 
-의존성은 Reducer의 init으로 받는다. 기존 패키지의 테스트 대역은 HackertonMocks를 사용한다. 홈·상세 Reducer는 앱 타깃에서 Domain Repository를 주입받으며, 앱 테스트 번들에서 요청과 State 변경을 검증한다.
+의존성은 Reducer의 init으로 받는다. 기존 패키지의 테스트 대역은 RoufMocks를 사용한다. 홈·상세 Reducer는 앱 타깃에서 Domain Repository를 주입받으며, 앱 테스트 번들에서 요청과 State 변경을 검증한다.
 
 State 전이는 `reduce`를 직접 호출하고, 경계값은 파라미터 테스트로 한 번에 확인한다. 네트워크가 끼면 안 되는 테스트에는 `unimplemented`를 넣는다. 호출되면 테스트가 실패한다.
 
@@ -98,8 +98,8 @@ func 로그인_성공시_유저가_저장된다() async {
 ## 실행
 
 ```bash
-scripts/test.sh core --scratch-path /tmp/NeoHack-core-tests  # 패키지 테스트; 추적 중인 기존 .build 보호
-scripts/test.sh app -only-testing:HackertonBoilerplateSnapshotTests/DataDomainTests  # 새 계층만
+scripts/test.sh core --scratch-path /tmp/Rouf-core-tests  # 패키지 테스트; 추적 중인 기존 .build 보호
+scripts/test.sh app -only-testing:RoufSnapshotTests/DataDomainTests  # 새 계층만
 scripts/test.sh app        # 스냅샷 + UI 테스트
 scripts/test.sh all        # 전체
 ```
@@ -120,7 +120,7 @@ git config core.hooksPath .githooks
 
 ## 커밋 전 스킴 검사
 
-`.githooks/pre-commit`은 공유 스킴(`HackertonBoilerplate.xcscheme`)이 커밋에 포함될 때만 동작한다. 스테이징된 스킴에 `HackertonBoilerplateSnapshotTests`와 `HackertonBoilerplateUITests` 테스트 대상이 없거나 스킴을 삭제하면 커밋을 막는다. Xcode 표준 형식이 아니면 경고만 띄운다. 활성화는 pre-push와 같다(`git config core.hooksPath .githooks`).
+`.githooks/pre-commit`은 공유 스킴(`Rouf.xcscheme`)이 커밋에 포함될 때만 동작한다. 스테이징된 스킴에 `RoufSnapshotTests`와 `RoufUITests` 테스트 대상이 없거나 스킴을 삭제하면 커밋을 막는다. Xcode 표준 형식이 아니면 경고만 띄운다. 활성화는 pre-push와 같다(`git config core.hooksPath .githooks`).
 
 - 열린 Xcode가 이전 스킴으로 파일을 덮어써 테스트 대상이 사라지는 일을 막기 위한 검사다. 막히면 Xcode를 종료하고 `git restore --staged --worktree <스킴 경로>`로 되돌린다.
 - 테스트 타깃을 추가·삭제하면 `.githooks/pre-commit`의 `REQUIRED_TESTABLES`도 함께 고친다.

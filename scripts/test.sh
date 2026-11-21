@@ -3,7 +3,7 @@
 #
 #   scripts/test.sh            # = core: 패키지 로직 테스트 (swift test, 시뮬레이터 없음, 수 초)
 #   scripts/test.sh app        # 스냅샷 + UI 테스트 (xcodebuild, 시뮬레이터)
-#   scripts/test.sh app -only-testing:HackertonBoilerplateSnapshotTests
+#   scripts/test.sh app -only-testing:RoufSnapshotTests
 #   scripts/test.sh all        # core + app
 #
 # 시뮬레이터는 TEST_DESTINATION으로 바꿀 수 있다. 스냅샷 기준 이미지는 iPhone 17 / iOS 26.2에서 기록했다.
@@ -13,13 +13,13 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 DESTINATION="${TEST_DESTINATION:-platform=iOS Simulator,name=iPhone 17,OS=26.2}"
 
 run_core() {
-    (cd "$ROOT/Packages/HackertonCore" && swift test "$@")
+    (cd "$ROOT/Packages/RoufCore" && swift test "$@")
 }
 
 run_app() {
     local command=(xcodebuild test
-        -project "$ROOT/HackertonBoilerplate.xcodeproj"
-        -scheme HackertonBoilerplate
+        -project "$ROOT/Rouf.xcodeproj"
+        -scheme Rouf
         -destination "$DESTINATION"
         "$@")
 

@@ -1,10 +1,10 @@
-# NeoHack
+# Rouf
 
 SwiftUI 보일러플레이트입니다. iOS 18 이상에서 홈·설정 탭으로 시작합니다. 역할은 UI 개발 2명, 서버 연결·테스트·기타 작업 1명으로 나누며, 담당자는 아직 정하지 않았습니다.
 
 ## 실행
 
-Xcode에서 `HackertonBoilerplate.xcodeproj`를 열고 `HackertonBoilerplate` 스킴으로 시뮬레이터에서 실행합니다. 시작 화면에는 로그인이나 서버 설정이 필요하지 않습니다.
+Xcode에서 `Rouf.xcodeproj`를 열고 `Rouf` 스킴으로 시뮬레이터에서 실행합니다. 시작 화면에는 로그인이나 서버 설정이 필요하지 않습니다.
 
 ## 개발 방식
 
@@ -16,7 +16,7 @@ Xcode에서 `HackertonBoilerplate.xcodeproj`를 열고 `HackertonBoilerplate` �
 ## 테스트
 
 ```bash
-scripts/test.sh        # 로직 테스트 (Packages/HackertonCore, swift test)
+scripts/test.sh        # 로직 테스트 (Packages/RoufCore, swift test)
 scripts/test.sh app    # 스냅샷 + UI 테스트 (시뮬레이터)
 ```
 

@@ -6,10 +6,10 @@
 #   테스트 대상을 일부러 바꿀 때는 아래 REQUIRED_TESTABLES를 함께 고친다.
 set -euo pipefail
 
-SCHEME="HackertonBoilerplate.xcodeproj/xcshareddata/xcschemes/HackertonBoilerplate.xcscheme"
+SCHEME="Rouf.xcodeproj/xcshareddata/xcschemes/Rouf.xcscheme"
 REQUIRED_TESTABLES=(
-    "HackertonBoilerplateSnapshotTests.xctest"
-    "HackertonBoilerplateUITests.xctest"
+    "RoufSnapshotTests.xctest"
+    "RoufUITests.xctest"
 )
 
 # 이번 커밋에 스킴이 포함되지 않으면 검사하지 않는다.

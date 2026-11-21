@@ -5,7 +5,7 @@
 앱 소스의 App·Core와 같은 레벨에 Data·Domain을 둔다. AppContainer가 계정별 Repository를 구성하고 Presentation의 홈·상세 Reducer에 주입한다.
 
 ```text
-HackertonBoilerplate/
+Rouf/
   App/
   Core/Network/
   Data/

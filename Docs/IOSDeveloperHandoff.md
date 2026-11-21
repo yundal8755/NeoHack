@@ -34,7 +34,7 @@ git push origin dev
 ## UI 개발
 
 - Figma에서 구현할 프레임의 링크를 복사해 구현을 요청합니다. 세부 절차는 [AGENTS.md](../AGENTS.md)를 따릅니다.
-- 화면은 View(`Presentation/<Feature>`)와 Reducer(`Packages/HackertonCore/Sources/HackertonCore/Feature/<Feature>`)로 구성합니다. State와 Action은 Reducer 내부에 정의합니다.
+- 화면은 View(`Presentation/<Feature>`)와 Reducer(`Packages/RoufCore/Sources/RoufCore/Feature/<Feature>`)로 구성합니다. State와 Action은 Reducer 내부에 정의합니다.
 - Reducer 테스트와 화면 스냅샷 테스트를 함께 추가합니다. 방법은 [테스트 가이드](Testing.md)를 따릅니다.
 - Reducer에서 주입받은 Repository 프로토콜을 호출하고, 반환된 Entity를 화면 상태에 반영합니다. View는 State를 표시하고 Action을 보냅니다.
 - UI 계층의 View·Reducer·State·Action에는 DTO를 사용하지 않습니다. 요청 DTO 생성과 응답 디코딩·매핑은 Repository 구현체가 담당하며, UI는 기본 타입이나 앱 입력 모델로 값을 전달합니다.

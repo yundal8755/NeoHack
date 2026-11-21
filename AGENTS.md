@@ -16,7 +16,7 @@
 
 - `.xcodeproj`(`project.pbxproj`, `.xcscheme`)를 Xcode 밖에서 수정하거나 pull·merge·reset으로 바꾸기 전에 Xcode를 종료한다. 열린 Xcode는 메모리의 이전 내용으로 파일을 다시 저장해 변경을 덮어쓴다.
 - 스킴은 Xcode의 Edit Scheme에서 수정하고 Xcode가 저장한 형식 그대로 커밋한다. 스킴 XML을 직접 작성하거나 한 줄 속성 형식으로 고치지 않는다.
-- 스킴이 변경 목록에 있으면 커밋 전에 `git diff`로 의도한 변경인지 확인한다. 테스트 대상(`HackertonBoilerplateSnapshotTests`, `HackertonBoilerplateUITests`)이 빠진 스킴은 `.githooks/pre-commit`이 커밋을 막는다.
+- 스킴이 변경 목록에 있으면 커밋 전에 `git diff`로 의도한 변경인지 확인한다. 테스트 대상(`RoufSnapshotTests`, `RoufUITests`)이 빠진 스킴은 `.githooks/pre-commit`이 커밋을 막는다.
 
 ## 외부 라이브러리와 공통 코드
 
@@ -31,12 +31,12 @@
 세부 내용은 `Docs/Testing.md`를 따른다.
 
 - 새 서비스의 Entity·입력·Repository 프로토콜은 앱 `Domain/<DomainName>`, DTO·Mapper·Endpoint·RepositoryImpl은 앱 `Data/<DomainName>`에 둔다. Domain은 Foundation만 사용한다. Data·Domain 테스트는 기존 앱 테스트 번들의 `DataDomain`에서 실행한다.
-- 공통 MVI·루틴 작성 폼 Reducer·입력 모델은 `Packages/HackertonCore`에 둔다. 앱 Domain을 사용하는 홈·상세 Reducer는 앱 Presentation에 두고 앱 테스트 번들에서 검증한다.
-- 외부 의존성 구현체는 앱 타깃에 둔다. 기존 패키지 의존성의 Mock은 `HackertonMocks`에 유지하고, 새 앱 Repository의 테스트 대역은 앱 테스트 번들에 둔다.
+- 공통 MVI·루틴 작성 폼 Reducer·입력 모델은 `Packages/RoufCore`에 둔다. 앱 Domain을 사용하는 홈·상세 Reducer는 앱 Presentation에 두고 앱 테스트 번들에서 검증한다.
+- 외부 의존성 구현체는 앱 타깃에 둔다. 기존 패키지 의존성의 Mock은 `RoufMocks`에 유지하고, 새 앱 Repository의 테스트 대역은 앱 테스트 번들에 둔다.
 - Reducer는 의존성을 init으로 받는다. State 전이는 `reduce`를 직접 호출해 검증하고, 경계값은 `@Test(arguments:)`로 한 번에 확인한다.
 - Effect는 `ReducerTester`로 send → receive → finish 순서로 검증한다. 호출되면 안 되는 의존성에는 `unimplemented`를 넣는다.
 - View는 `init(store:)`로 Store를 받는다. 새 화면이나 공통 컴포넌트를 만들면 State별 스냅샷 테스트를 추가한다.
 - 상호작용하는 요소에는 `AccessibilityID` 상수로 `accessibilityIdentifier`를 붙인다. UI 테스트는 `-mock-mode`로 실행한다.
 - 버그 수정은 버그를 재현하는 실패 테스트를 먼저 작성하고 실패를 확인한 뒤 고친다.
 - 테스트나 스냅샷 기준 이미지를 고쳐서 통과시키지 않는다. 기준 이미지를 다시 찍어야 하면 사용자에게 먼저 묻는다.
-- 완료 전 `scripts/test.sh`를 실행한다. Data·Domain 변경 시 `scripts/test.sh app -only-testing:HackertonBoilerplateSnapshotTests/DataDomainTests`도 실행한다. 화면을 바꿨으면 `scripts/test.sh app`도 실행한다.
+- 완료 전 `scripts/test.sh`를 실행한다. Data·Domain 변경 시 `scripts/test.sh app -only-testing:RoufSnapshotTests/DataDomainTests`도 실행한다. 화면을 바꿨으면 `scripts/test.sh app`도 실행한다.

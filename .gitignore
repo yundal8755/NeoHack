@@ -1,0 +1,22 @@
+# macOS
+.DS_Store
+
+# Xcode
+DerivedData/
+build/
+*.xcuserstate
+*.xcscmblueprint
+xcuserdata/
+*.moved-aside
+
+# Swift Package Manager
+.swiftpm/
+
+# Local agent/browser artifacts
+.omo/
+.playwright-mcp/
+
+# Local configuration
+Config/*.local.xcconfig
+.env
+.env.*

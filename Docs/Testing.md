@@ -116,4 +116,4 @@ scripts/test.sh app        # 스냅샷 + UI 테스트
 scripts/test.sh all        # 전체
 ```
 
-`xcbeautify`가 설치되어 있으면 출력을 정리하고, 없으면 `-quiet`로 실행한다.
+`xcbeautify`가 설치되어 있으면 출력을 정리하고, 없으면 설치 안내를 한 줄 띄운 뒤 빌드 오류, 실패한 테스트와 이유, 최종 결과만 걸러서 보여준다. 설치는 선택이며 권장한다(`brew install xcbeautify`).

@@ -249,6 +249,12 @@ struct RoutineDetailView: View {
         }
         .background(AppColor.background)
         .toolbar(.hidden, for: .navigationBar)
+        .swipeBack(
+            isEnabled: !store.state.isBusy && !isCommentsPresented && !isEditPresented
+                && !isParticipationPresented && !isResultsPresented && !isPublicProfilePresented
+                && !isParticipantsPresented && !isDeleteRoutinePresented,
+            action: closeDetail
+        )
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier(AccessibilityID.RoutineDetail.screen)
         .feedbackPopup(Binding(

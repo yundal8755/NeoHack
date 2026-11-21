@@ -117,6 +117,7 @@ struct MyProfileView: View {
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier(AccessibilityID.MyProfile.screen)
         .toolbar(.hidden, for: .navigationBar)
+        .swipeBack(isEnabled: store.state.edit == nil, action: onBack)
         .task(id: participationCompletedID) {
             mine.send(.appeared)
             if participationCompletedID != nil {

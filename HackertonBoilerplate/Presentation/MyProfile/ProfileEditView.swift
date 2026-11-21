@@ -30,44 +30,54 @@ struct ProfileEditView: View {
     private var bio: String { state.edit?.bio ?? "" }
 
     var body: some View {
-        VStack(spacing: 0) {
-            AppTopBar(
-                "프로필 편집",
-                leading: .asset("CaretLeft", label: "뒤로 가기", isEnabled: !state.isSaving) {
-                    focusedField = nil
-                    store.send(.closeEditor)
-                })
+        ZStack(alignment: .bottom) {
+            VStack(spacing: 0) {
+                AppTopBar(
+                    "프로필 편집",
+                    leading: .asset("CaretLeft", label: "뒤로 가기", isEnabled: !state.isSaving) {
+                        focusedField = nil
+                        store.send(.closeEditor)
+                    })
 
-            ScrollView {
-                VStack(spacing: AppSpacing.lg) {
-                    photoPicker
-                        .padding(.top, AppSpacing.lg)
+                ScrollView {
+                    VStack(spacing: AppSpacing.lg) {
+                        photoPicker
+                            .padding(.top, AppSpacing.lg)
 
-                    VStack(alignment: .leading, spacing: AppSpacing.lg) {
-                        nicknameField
-                        bioField
+                        VStack(alignment: .leading, spacing: AppSpacing.lg) {
+                            nicknameField
+                            bioField
+                        }
+
+                        if let message = state.editError {
+                            Text(verbatim: message)
+                                .appFont(AppFont.caption2)
+                                .foregroundStyle(AppColor.error)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                        }
                     }
-
-                    if let message = state.editError {
-                        Text(verbatim: message)
-                            .appFont(AppFont.caption2)
-                            .foregroundStyle(AppColor.error)
-                            .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, AppSpacing.md)
+                    .padding(.bottom, AppSpacing.lg)
+                    .background {
+                        // 입력창 밖 빈 곳을 누르면 키보드를 내린다.
+                        Color.clear
+                            .contentShape(Rectangle())
+                            .onTapGesture { focusedField = nil }
                     }
                 }
-                .padding(.horizontal, AppSpacing.md)
-                .padding(.bottom, AppSpacing.lg)
-                .background {
-                    // 입력창 밖 빈 곳을 누르면 키보드를 내린다.
-                    Color.clear
-                        .contentShape(Rectangle())
-                        .onTapGesture { focusedField = nil }
-                }
+                .scrollDismissesKeyboard(.interactively)
+                .safeAreaPadding(.bottom, Self.bottomBarHeight)
             }
-            .scrollDismissesKeyboard(.interactively)
-            .safeAreaInset(edge: .bottom, spacing: 0) { saveButton }
+
+            saveButton
+                .frame(maxHeight: .infinity, alignment: .bottom)
+                .ignoresSafeArea(.keyboard, edges: .bottom)
         }
         .background(AppColor.background)
+        .swipeBack(isEnabled: !state.isSaving && !state.isDiscardAlertPresented) {
+            focusedField = nil
+            store.send(.closeEditor)
+        }
         .disabled(state.isSaving)
         .toolbar(.hidden, for: .navigationBar)
         .accessibilityElement(children: .contain)
@@ -195,6 +205,9 @@ struct ProfileEditView: View {
     }
 
     // MARK: - 저장
+
+    private static let bottomBarHeight: CGFloat =
+        AppSpacing.xs * 2 + AppFont.body2.lineHeight + AppSpacing.buttonPadding * 2
 
     private var saveButton: some View {
         PrimaryButton(state.isSaving ? "저장 중..." : "저장") {

@@ -13,6 +13,15 @@ Xcode에서 `HackertonBoilerplate.xcodeproj`를 열고 `HackertonBoilerplate` �
 - 서버 연결 담당은 Data layer 전체와 Entity 구성, 서버 연동·테스트·기타 작업을 맡습니다.
 - 화면 상태는 공통 MVI를 사용하고, 서버 응답은 DTO → Mapper → Entity로 변환합니다.
 
+## 테스트
+
+```bash
+scripts/test.sh        # 로직 테스트 (Packages/HackertonCore, swift test)
+scripts/test.sh app    # 스냅샷 + UI 테스트 (시뮬레이터)
+```
+
+자세한 내용은 [테스트 가이드](Docs/Testing.md)를 참고합니다.
+
 ## 서버 설정
 
 `Config/AppConfig.local.example.xcconfig`를 `Config/AppConfig.local.xcconfig`로 복사해 `API_BASE_URL`을 설정합니다. xcconfig의 URL에서 `//`는 `/$()/`로 표기합니다. 로컬 설정 파일은 Git에서 제외됩니다.
@@ -28,4 +37,5 @@ Figma에서 구현할 프레임의 Dev Mode 링크를 복사해 구현 요청에
 - [역할과 작업 흐름](Docs/IOSDeveloperHandoff.md)
 - [아키텍처와 데이터 흐름](Docs/CleanArchitecture.md)
 - [서버 연결과 데이터 전달](Docs/APICollaboration.md)
+- [테스트 가이드](Docs/Testing.md)
 - [AI 개발 지침](AGENTS.md)

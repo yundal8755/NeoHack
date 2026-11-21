@@ -11,12 +11,36 @@
 		04C194B52FB6B96E0051D3A3 /* SwiftyBeaver in Frameworks */ = {isa = PBXBuildFile; productRef = 04C194B42FB6B96E0051D3A3 /* SwiftyBeaver */; };
 		04C194B82FB6B9980051D3A3 /* PopupView in Frameworks */ = {isa = PBXBuildFile; productRef = 04C194B72FB6B9980051D3A3 /* PopupView */; };
 		04D9F44E2FB2F100008B5554 /* Alamofire in Frameworks */ = {isa = PBXBuildFile; productRef = 04D9F44F2FB2F100008B5554 /* Alamofire */; };
+		0A7E5700000000000000A008 /* MVICore in Frameworks */ = {isa = PBXBuildFile; productRef = 0A7E5700000000000000A003 /* MVICore */; };
+		0A7E5700000000000000A009 /* HackertonCore in Frameworks */ = {isa = PBXBuildFile; productRef = 0A7E5700000000000000A004 /* HackertonCore */; };
+		0A7E5700000000000000A00A /* HackertonMocks in Frameworks */ = {isa = PBXBuildFile; productRef = 0A7E5700000000000000A005 /* HackertonMocks */; };
+		0A7E5700000000000000A00B /* SnapshotTesting in Frameworks */ = {isa = PBXBuildFile; productRef = 0A7E5700000000000000A006 /* SnapshotTesting */; };
+		0A7E5700000000000000A00C /* HackertonCore in Frameworks */ = {isa = PBXBuildFile; productRef = 0A7E5700000000000000A007 /* HackertonCore */; };
 /* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		0A7E5700000000000000A01A /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 04D9F4382FB2E4C2008B5554 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 04D9F43F2FB2E4C2008B5554;
+			remoteInfo = HackertonBoilerplate;
+		};
+		0A7E5700000000000000A01C /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 04D9F4382FB2E4C2008B5554 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 04D9F43F2FB2E4C2008B5554;
+			remoteInfo = HackertonBoilerplate;
+		};
+/* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
 		04D9F4402FB2E4C2008B5554 /* HackertonBoilerplate.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = HackertonBoilerplate.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		04F1A0012FC0000000ABC001 /* AppConfig.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = AppConfig.xcconfig; sourceTree = "<group>"; };
 		04F1A0022FC0000000ABC001 /* AppConfig.local.example.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = AppConfig.local.example.xcconfig; sourceTree = "<group>"; };
+		0A7E5700000000000000A00D /* HackertonBoilerplateSnapshotTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = HackertonBoilerplateSnapshotTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		0A7E5700000000000000A00E /* HackertonBoilerplateUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = HackertonBoilerplateUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -38,6 +62,16 @@
 			path = HackertonBoilerplate;
 			sourceTree = "<group>";
 		};
+		0A7E5700000000000000A00F /* HackertonBoilerplateSnapshotTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = HackertonBoilerplateSnapshotTests;
+			sourceTree = "<group>";
+		};
+		0A7E5700000000000000A010 /* HackertonBoilerplateUITests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = HackertonBoilerplateUITests;
+			sourceTree = "<group>";
+		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -49,6 +83,25 @@
 				04C194B22FB6B9620051D3A3 /* Kingfisher in Frameworks */,
 				04D9F44E2FB2F100008B5554 /* Alamofire in Frameworks */,
 				04C194B52FB6B96E0051D3A3 /* SwiftyBeaver in Frameworks */,
+				0A7E5700000000000000A008 /* MVICore in Frameworks */,
+				0A7E5700000000000000A009 /* HackertonCore in Frameworks */,
+				0A7E5700000000000000A00A /* HackertonMocks in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		0A7E5700000000000000A013 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				0A7E5700000000000000A00B /* SnapshotTesting in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		0A7E5700000000000000A016 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				0A7E5700000000000000A00C /* HackertonCore in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -60,6 +113,8 @@
 			children = (
 				04F1A0002FC0000000ABC001 /* Config */,
 				04D9F4422FB2E4C2008B5554 /* HackertonBoilerplate */,
+				0A7E5700000000000000A00F /* HackertonBoilerplateSnapshotTests */,
+				0A7E5700000000000000A010 /* HackertonBoilerplateUITests */,
 				04D9F4412FB2E4C2008B5554 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -68,6 +123,8 @@
 			isa = PBXGroup;
 			children = (
 				04D9F4402FB2E4C2008B5554 /* HackertonBoilerplate.app */,
+				0A7E5700000000000000A00D /* HackertonBoilerplateSnapshotTests.xctest */,
+				0A7E5700000000000000A00E /* HackertonBoilerplateUITests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -105,10 +162,61 @@
 				04C194B12FB6B9620051D3A3 /* Kingfisher */,
 				04C194B42FB6B96E0051D3A3 /* SwiftyBeaver */,
 				04C194B72FB6B9980051D3A3 /* PopupView */,
+				0A7E5700000000000000A003 /* MVICore */,
+				0A7E5700000000000000A004 /* HackertonCore */,
+				0A7E5700000000000000A005 /* HackertonMocks */,
 			);
 			productName = HackertonBoilerplate;
 			productReference = 04D9F4402FB2E4C2008B5554 /* HackertonBoilerplate.app */;
 			productType = "com.apple.product-type.application";
+		};
+		0A7E5700000000000000A018 /* HackertonBoilerplateSnapshotTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 0A7E5700000000000000A01E /* Build configuration list for PBXNativeTarget "HackertonBoilerplateSnapshotTests" */;
+			buildPhases = (
+				0A7E5700000000000000A012 /* Sources */,
+				0A7E5700000000000000A013 /* Frameworks */,
+				0A7E5700000000000000A014 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				0A7E5700000000000000A01B /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				0A7E5700000000000000A00F /* HackertonBoilerplateSnapshotTests */,
+			);
+			name = HackertonBoilerplateSnapshotTests;
+			packageProductDependencies = (
+				0A7E5700000000000000A006 /* SnapshotTesting */,
+			);
+			productName = HackertonBoilerplateSnapshotTests;
+			productReference = 0A7E5700000000000000A00D /* HackertonBoilerplateSnapshotTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+		0A7E5700000000000000A019 /* HackertonBoilerplateUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 0A7E5700000000000000A01F /* Build configuration list for PBXNativeTarget "HackertonBoilerplateUITests" */;
+			buildPhases = (
+				0A7E5700000000000000A015 /* Sources */,
+				0A7E5700000000000000A016 /* Frameworks */,
+				0A7E5700000000000000A017 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				0A7E5700000000000000A01D /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				0A7E5700000000000000A010 /* HackertonBoilerplateUITests */,
+			);
+			name = HackertonBoilerplateUITests;
+			packageProductDependencies = (
+				0A7E5700000000000000A007 /* HackertonCore */,
+			);
+			productName = HackertonBoilerplateUITests;
+			productReference = 0A7E5700000000000000A00E /* HackertonBoilerplateUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
 		};
 /* End PBXNativeTarget section */
 
@@ -122,6 +230,14 @@
 				TargetAttributes = {
 					04D9F43F2FB2E4C2008B5554 = {
 						CreatedOnToolsVersion = 26.2;
+					};
+					0A7E5700000000000000A018 = {
+						CreatedOnToolsVersion = 26.2;
+						TestTargetID = 04D9F43F2FB2E4C2008B5554;
+					};
+					0A7E5700000000000000A019 = {
+						CreatedOnToolsVersion = 26.2;
+						TestTargetID = 04D9F43F2FB2E4C2008B5554;
 					};
 				};
 			};
@@ -139,6 +255,8 @@
 				04C194B02FB6B9620051D3A3 /* XCRemoteSwiftPackageReference "Kingfisher" */,
 				04C194B32FB6B96E0051D3A3 /* XCRemoteSwiftPackageReference "SwiftyBeaver" */,
 				04C194B62FB6B9980051D3A3 /* XCRemoteSwiftPackageReference "PopupView" */,
+				0A7E5700000000000000A001 /* XCLocalSwiftPackageReference "Packages/HackertonCore" */,
+				0A7E5700000000000000A002 /* XCRemoteSwiftPackageReference "swift-snapshot-testing" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 04D9F4412FB2E4C2008B5554 /* Products */;
@@ -146,12 +264,28 @@
 			projectRoot = "";
 			targets = (
 				04D9F43F2FB2E4C2008B5554 /* HackertonBoilerplate */,
+				0A7E5700000000000000A018 /* HackertonBoilerplateSnapshotTests */,
+				0A7E5700000000000000A019 /* HackertonBoilerplateUITests */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
 		04D9F43E2FB2E4C2008B5554 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		0A7E5700000000000000A014 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		0A7E5700000000000000A017 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -168,7 +302,34 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		0A7E5700000000000000A012 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		0A7E5700000000000000A015 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		0A7E5700000000000000A01B /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 04D9F43F2FB2E4C2008B5554 /* HackertonBoilerplate */;
+			targetProxy = 0A7E5700000000000000A01A /* PBXContainerItemProxy */;
+		};
+		0A7E5700000000000000A01D /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 04D9F43F2FB2E4C2008B5554 /* HackertonBoilerplate */;
+			targetProxy = 0A7E5700000000000000A01C /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		04D9F4492FB2E4C3008B5554 /* Debug */ = {
@@ -342,6 +503,84 @@
 			};
 			name = Release;
 		};
+		0A7E5700000000000000A020 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.example.HackertonBoilerplateSnapshotTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/HackertonBoilerplate.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/HackertonBoilerplate";
+			};
+			name = Debug;
+		};
+		0A7E5700000000000000A021 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.example.HackertonBoilerplateSnapshotTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/HackertonBoilerplate.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/HackertonBoilerplate";
+			};
+			name = Release;
+		};
+		0A7E5700000000000000A022 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.example.HackertonBoilerplateUITests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = HackertonBoilerplate;
+			};
+			name = Debug;
+		};
+		0A7E5700000000000000A023 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.example.HackertonBoilerplateUITests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = HackertonBoilerplate;
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -363,7 +602,32 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
+		0A7E5700000000000000A01E /* Build configuration list for PBXNativeTarget "HackertonBoilerplateSnapshotTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				0A7E5700000000000000A020 /* Debug */,
+				0A7E5700000000000000A021 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		0A7E5700000000000000A01F /* Build configuration list for PBXNativeTarget "HackertonBoilerplateUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				0A7E5700000000000000A022 /* Debug */,
+				0A7E5700000000000000A023 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 /* End XCConfigurationList section */
+
+/* Begin XCLocalSwiftPackageReference section */
+		0A7E5700000000000000A001 /* XCLocalSwiftPackageReference "Packages/HackertonCore" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = Packages/HackertonCore;
+		};
+/* End XCLocalSwiftPackageReference section */
 
 /* Begin XCRemoteSwiftPackageReference section */
 		04C194B02FB6B9620051D3A3 /* XCRemoteSwiftPackageReference "Kingfisher" */ = {
@@ -398,6 +662,14 @@
 				minimumVersion = 5.10.0;
 			};
 		};
+		0A7E5700000000000000A002 /* XCRemoteSwiftPackageReference "swift-snapshot-testing" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/pointfreeco/swift-snapshot-testing";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 1.17.0;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -420,6 +692,31 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 04D9F4502FB2F100008B5554 /* XCRemoteSwiftPackageReference "Alamofire" */;
 			productName = Alamofire;
+		};
+		0A7E5700000000000000A003 /* MVICore */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 0A7E5700000000000000A001 /* XCLocalSwiftPackageReference "Packages/HackertonCore" */;
+			productName = MVICore;
+		};
+		0A7E5700000000000000A004 /* HackertonCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 0A7E5700000000000000A001 /* XCLocalSwiftPackageReference "Packages/HackertonCore" */;
+			productName = HackertonCore;
+		};
+		0A7E5700000000000000A005 /* HackertonMocks */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 0A7E5700000000000000A001 /* XCLocalSwiftPackageReference "Packages/HackertonCore" */;
+			productName = HackertonMocks;
+		};
+		0A7E5700000000000000A006 /* SnapshotTesting */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 0A7E5700000000000000A002 /* XCRemoteSwiftPackageReference "swift-snapshot-testing" */;
+			productName = SnapshotTesting;
+		};
+		0A7E5700000000000000A007 /* HackertonCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 0A7E5700000000000000A001 /* XCLocalSwiftPackageReference "Packages/HackertonCore" */;
+			productName = HackertonCore;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

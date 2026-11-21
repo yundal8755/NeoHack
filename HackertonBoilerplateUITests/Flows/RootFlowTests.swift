@@ -8,15 +8,12 @@ final class RootFlowTests: XCTestCase {
     }
 
     @MainActor
-    func test_목_모드로_실행하면_홈에서_설정_탭으로_이동한다() {
+    func test_목_모드로_실행하면_홈_화면이_보인다() {
         let app = XCUIApplication()
         app.launchArguments = AppLaunchConfiguration.launchArguments(for: .mock(.default))
         app.launch()
 
         let screen = RootScreen(app: app)
         XCTAssertTrue(screen.homeScreen.waitForExistence(timeout: 10))
-
-        screen.openSettingsTab()
-        XCTAssertTrue(screen.settingsScreen.waitForExistence(timeout: 5))
     }
 }

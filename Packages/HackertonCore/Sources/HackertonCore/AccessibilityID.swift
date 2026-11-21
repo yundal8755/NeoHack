@@ -6,7 +6,6 @@ import Foundation
 public enum AccessibilityID {
     public enum Root {
         public static let homeScreen = "root.homeScreen"
-        public static let settingsScreen = "root.settingsScreen"
     }
 
     public enum RoutineCreate {

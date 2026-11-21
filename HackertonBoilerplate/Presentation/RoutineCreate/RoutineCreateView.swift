@@ -149,14 +149,13 @@ struct RoutineCreateView: View {
 
     // MARK: - 하단 버튼
 
-    /// 첫 스텝에서는 이전 버튼 자리를 비워 다음 버튼을 오른쪽 절반에 둔다(Figma 첫 스텝 프레임).
+    /// 첫 스텝에서는 이전 버튼 없이 다음 버튼을 최대 너비로 둔다(Figma 첫 스텝 프레임).
     private var bottomButtons: some View {
         HStack(spacing: AppSpacing.buttonPadding) {
-            PrimaryButton("이전") { store.send(.previousTapped) }
-                .opacity(state.isPreviousVisible ? 1 : 0)
-                .disabled(!state.isPreviousVisible)
-                .accessibilityHidden(!state.isPreviousVisible)
-                .accessibilityIdentifier(AccessibilityID.RoutineCreate.previousButton)
+            if state.isPreviousVisible {
+                PrimaryButton("이전") { store.send(.previousTapped) }
+                    .accessibilityIdentifier(AccessibilityID.RoutineCreate.previousButton)
+            }
 
             if state.currentStep != nil {
                 PrimaryButton("다음") { store.send(.nextTapped) }

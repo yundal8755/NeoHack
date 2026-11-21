@@ -15,8 +15,11 @@ struct RoutineDetailView: View {
     private let resultParticipantID: String?
     private let onUpdated: () -> Void
     @State private var isEditPresented = false
-    @State private var isResultsPresented = false
-    @State private var isPublicProfilePresented = false
+    @State private var selectedProfile: ProfileRoute?
+
+    private struct ProfileRoute: Identifiable {
+        let id: String
+    }
     private let onParticipationCompleted: () -> Void
     @State private var feedbackID = UUID()
     @Environment(\.dismiss) private var dismiss
@@ -254,7 +257,7 @@ struct RoutineDetailView: View {
         .toolbar(.hidden, for: .navigationBar)
         .swipeBack(
             isEnabled: !store.state.isBusy && !isCommentsPresented && !isEditPresented
-                && !isParticipationPresented && !isResultsPresented && !isPublicProfilePresented
+                && !isParticipationPresented && selectedProfile == nil
                 && !isParticipantsPresented && !isDeleteRoutinePresented,
             action: closeDetail
         )
@@ -278,24 +281,31 @@ struct RoutineDetailView: View {
 
     private var detailHeader: some View {
         VStack(alignment: .leading, spacing: AppSpacing.md) {
-            HStack(spacing: AppSpacing.xs) {
-                ProfileAvatar(url: store.state.authorImageURL, size: store.state.isParticipationResult ? 35 : 44)
-                Text(store.state.authorNickname ?? "")
-                    .appFont(AppFont.body2)
-                    .lineLimit(1)
-                Spacer(minLength: AppSpacing.xs)
-                if let date = store.state.createdAt {
-                    Text(Self.detailDateFormatter.string(from: date))
-                        .appFont(AppFont.caption2)
-                        .foregroundStyle(AppColor.textSecondary)
+            Button {
+                guard let owner = store.state.entity?.owner, session != nil else { return }
+                selectedProfile = ProfileRoute(id: owner.id)
+            } label: {
+                HStack(spacing: AppSpacing.xs) {
+                    ProfileAvatar(url: store.state.authorImageURL, size: store.state.isParticipationResult ? 35 : 44)
+                    Text(store.state.authorNickname ?? "")
+                        .appFont(AppFont.body2)
                         .lineLimit(1)
-                        .minimumScaleFactor(0.8)
+                    Spacer(minLength: AppSpacing.xs)
+                    if let date = store.state.createdAt {
+                        Text(Self.detailDateFormatter.string(from: date))
+                            .appFont(AppFont.caption2)
+                            .foregroundStyle(AppColor.textSecondary)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.8)
+                    }
                 }
+                .frame(minHeight: 44)
+                .contentShape(Rectangle())
             }
-            .contentShape(Rectangle())
-            .onTapGesture {
-                if session != nil, store.state.entity?.owner != nil { isPublicProfilePresented = true }
-            }
+            .buttonStyle(.plain)
+            .foregroundStyle(AppColor.textPrimary)
+            .disabled(session == nil || store.state.entity?.owner == nil)
+            .accessibilityLabel("\(store.state.authorNickname ?? "작성자") 프로필 보기")
             .accessibilityIdentifier(AccessibilityID.RoutineDetail.authorProfileButton)
             if store.state.isParticipationResult {
                 Text(store.state.title)
@@ -382,18 +392,8 @@ struct RoutineDetailView: View {
 
             Text("참여중 \(store.state.participatingCount)")
                 .foregroundStyle(AppColor.primary)
-            if session != nil, routineID != nil {
-                Button { isResultsPresented = true } label: {
-                    Text("참여 완료 \(store.state.completedCount)")
-                        .foregroundStyle(AppColor.gray500)
-                        .frame(minHeight: 44)
-                        .contentShape(Rectangle())
-                }
-                .accessibilityIdentifier(AccessibilityID.RoutineDetail.resultsButton)
-            } else {
-                Text("참여 완료 \(store.state.completedCount)")
-                    .foregroundStyle(AppColor.gray500)
-            }
+            Text("참여 완료 \(store.state.completedCount)")
+                .foregroundStyle(AppColor.gray500)
         }
         .appFont(AppFont.caption1.weight(.medium))
         .fixedSize(horizontal: true, vertical: false)

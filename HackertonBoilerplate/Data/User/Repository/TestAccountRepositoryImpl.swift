@@ -19,7 +19,8 @@ struct TestAccountRepositoryImpl: TestAccountRepository {
         try TestAccount(
             id: Mapping.pathID(Mapping.required(dto.publicId, "publicId")),
             slot: Mapping.required(dto.slot, "slot"), nickname: Mapping.required(dto.nickname, "nickname"),
-            available: Mapping.required(dto.available, "available"), profileImageID: dto.profileImagePublicId)
+            available: Mapping.required(dto.available, "available"), profileImageID: dto.profileImagePublicId,
+            profileImageURL: dto.profileImagePublicId.flatMap(ImageEndpoint.imageURL))
     }
 
     func claim(accountID: String) async throws -> TestAccountLease {

@@ -6,6 +6,7 @@ nonisolated struct TestAccount: Equatable, Identifiable, Sendable {
     let nickname: String
     let available: Bool
     var profileImageID: String? = nil
+    var profileImageURL: URL? = nil
 }
 
 nonisolated struct TestAccountLease: Equatable, Sendable {

@@ -73,7 +73,7 @@ extension AccountCard {
         self.init(
             nickname: account.nickname,
             slot: account.slot,
-            profileImageURL: profileImageURL,
+            profileImageURL: profileImageURL ?? account.profileImageURL,
             status: isConnecting ? .connecting : (account.available ? .available : .inUse),
             action: action
         )

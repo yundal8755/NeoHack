@@ -3,6 +3,7 @@ import SwiftUI
 extension View {
     /// 인스타그램처럼 화면을 오른쪽으로 밀면 왼쪽에서 루틴 만들기 안내가 드러나고,
     /// 충분히 밀거나 빠르게 튕기고 놓으면 화면이 끝까지 밀린 뒤 `onCommit`을 애니메이션 없이 부른다.
+    /// 왼쪽으로 밀면 뒤에 있던 프로필이 드러나고, 프로필에서 오른쪽으로 밀면 같은 방식으로 홈을 다시 끌어온다.
     /// 기준선을 넘거나 되돌아올 때 햅틱을 준다.
     func routineCreateSwipe<Profile: View>(profile: Profile, isProfilePresented: Binding<Bool>, isDragging: Binding<Bool>, onCommit: @escaping () -> Void) -> some View {
         modifier(RoutineCreateSwipe(profile: profile, isProfilePresented: isProfilePresented, isDragging: isDragging, onCommit: onCommit))
@@ -37,11 +38,6 @@ private struct RoutineCreateSwipe<Profile: View>: ViewModifier {
     private static var flickRatio: CGFloat { 0.6 }
 
     private var offset: CGFloat { settledOffset + drag.offset }
-    /// 밀기 시작하면 모서리를 둥글게 키우고, 이 거리만큼 밀면 최대가 된다.
-    private static var cornerRoundingDistance: CGFloat { 48 }
-    private var cornerRadius: CGFloat {
-        AppRadius.slidingScreen * min(abs(offset) / Self.cornerRoundingDistance, 1)
-    }
     private var commitDistance: CGFloat { width * Self.commitRatio }
     private var isReady: Bool { width > 0 && abs(drag.offset) >= commitDistance }
 
@@ -67,19 +63,7 @@ private struct RoutineCreateSwipe<Profile: View>: ViewModifier {
             }
 
             content
-                .background(AppColor.background.ignoresSafeArea())
-                // 밀리는 동안 홈을 둥근 카드로 보이게 한다. 상태 표시줄·홈 인디케이터 영역까지 같은 모양으로 자른다.
-                .mask {
-                    RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                        .ignoresSafeArea()
-                }
-                .background {
-                    RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                        .fill(AppColor.background)
-                        .shadow(color: AppColor.black.opacity(abs(offset) > 0 ? AppOpacity.overlay : 0), radius: 24)
-                        .ignoresSafeArea()
-                }
-                .offset(x: offset)
+                .modifier(SlidingCard(offset: offset, width: width))
                 // 가로 드래그 중 카드 버튼이 손을 떼는 동작을 탭으로 처리하지 않게 한다.
                 .allowsHitTesting(!isProfilePresented && !isCommitting && drag.isHorizontal != true)
                 .accessibilityHidden(isProfilePresented)
@@ -93,28 +77,23 @@ private struct RoutineCreateSwipe<Profile: View>: ViewModifier {
                 settledOffset = presented ? -width : 0
             }
         }
-        .simultaneousGesture(dragGesture, isEnabled: !isCommitting && !isProfilePresented)
-        .simultaneousGesture(profileReturnGesture, isEnabled: !isCommitting && isProfilePresented)
+        .simultaneousGesture(dragGesture, isEnabled: !isCommitting)
+        .onChange(of: drag.isHorizontal) { _, isHorizontal in
+            // 화면을 넘기지 않고 끝났거나 시스템 제스처에 끊긴 드래그를 정리한다. 넘기는 중이면 `commit`이 끝나면서 푼다.
+            if isHorizontal == nil, !isCommitting { endDragging() }
+        }
         .onChange(of: isReady) { _, ready in
             guard !isCommitting else { return }
             HapticFeedbackManager.shared.impact(style: ready ? .medium : .light)
         }
     }
 
-    private var profileReturnGesture: some Gesture {
-        DragGesture(minimumDistance: 12)
-            .onEnded { value in
-                let translation = value.translation
-                guard isProfilePresented, width > 0,
-                      translation.width < 0, abs(translation.width) > abs(translation.height) else { return }
-                let isFlick = -value.predictedEndTranslation.width >= width * Self.flickRatio
-                guard -translation.width >= commitDistance || isFlick else { return }
-                HapticFeedbackManager.shared.impact(style: .light)
-                isDragging = false
-                isProfilePresented = false
-            }
+    /// 드래그로 움직일 수 있는 거리. 프로필이 열려 있으면 왼쪽 밖에 있는 홈을 제자리까지만 끌어온다.
+    private func clamped(_ translation: CGFloat) -> CGFloat {
+        min(max(translation, isProfilePresented ? 0 : -width), width)
     }
 
+    /// 홈에서 양쪽으로 밀 때와 프로필에서 홈을 끌어올 때 모두 이 제스처 하나로 처리한다.
     private var dragGesture: some Gesture {
         DragGesture(minimumDistance: 12)
             .updating($drag) { value, state, _ in
@@ -123,7 +102,7 @@ private struct RoutineCreateSwipe<Profile: View>: ViewModifier {
                     state.isHorizontal = abs(translation.width) > abs(translation.height)
                 }
                 guard state.isHorizontal == true else { return }
-                state.offset = min(max(translation.width, -width), width)
+                state.offset = clamped(translation.width)
             }
             .onChanged { _ in
                 if drag.isHorizontal == true {
@@ -132,19 +111,37 @@ private struct RoutineCreateSwipe<Profile: View>: ViewModifier {
             }
             .onEnded { value in
                 let translation = value.translation
-                guard abs(translation.width) > abs(translation.height), width > 0 else {
-                    isDragging = false
-                    return
-                }
-                let dragged = min(max(translation.width, -width), width)
+                guard abs(translation.width) > abs(translation.height), width > 0 else { return }
+                let dragged = clamped(translation.width)
                 let direction: CGFloat = dragged < 0 ? -1 : 1
                 let isFlick = value.predictedEndTranslation.width * direction >= width * Self.flickRatio
-                guard abs(dragged) >= commitDistance || (abs(dragged) > 0 && isFlick) else {
-                    isDragging = false
-                    return
+                let fromReady = abs(dragged) >= commitDistance
+                guard fromReady || (abs(dragged) > 0 && isFlick) else { return }
+                if isProfilePresented {
+                    returnHome(fromReady: fromReady)
+                } else {
+                    commit(direction: direction, fromReady: fromReady)
                 }
-                commit(direction: direction, fromReady: abs(dragged) >= commitDistance)
             }
+    }
+
+    /// 프로필에서 홈을 끌어와 놓았을 때. 홈이 맨 위 카드라 덮을 화면이 없으므로 바로 닫힌 상태로 바꾸고,
+    /// 놓은 자리에서 제자리까지는 열 때와 같은 `settleAnimation`으로 이어서 움직인다.
+    private func returnHome(fromReady: Bool) {
+        if !fromReady {
+            HapticFeedbackManager.shared.impact(style: .medium)
+        }
+        withAnimation(Self.settleAnimation) {
+            settledOffset = 0
+        }
+        isProfilePresented = false
+    }
+
+    /// 드래그가 끝났을 때 `isDragging`을 푼다.
+    /// 카드 버튼은 손을 뗄 때 이 제스처의 `onEnded`보다 늦게 탭을 처리하므로, 그 탭이 지나간 다음에 풀리도록 한 박자 늦춘다.
+    private func endDragging() {
+        let isDragging = $isDragging
+        DispatchQueue.main.async { isDragging.wrappedValue = false }
     }
 
     private func commit(direction: CGFloat, fromReady: Bool) {
@@ -172,6 +169,50 @@ private struct RoutineCreateSwipe<Profile: View>: ViewModifier {
                 isDragging = false
             }
         }
+    }
+}
+
+/// 밀리는 홈 카드의 모양. 모서리와 그림자를 지금 위치에서 바로 계산하므로,
+/// 손으로 끌든 버튼으로 열고 닫든 같은 위치에서는 같은 모습으로 지나간다.
+private struct SlidingCard: ViewModifier, Animatable {
+    /// 제자리에서 밀린 거리. 애니메이션 중에는 그 순간의 중간 값이 들어온다.
+    var offset: CGFloat
+    let width: CGFloat
+
+    var animatableData: CGFloat {
+        get { offset }
+        set { offset = newValue }
+    }
+
+    /// 밀기 시작하면 모서리를 둥글게 키우고, 이 거리만큼 밀면 최대가 된다.
+    private static var roundingDistance: CGFloat { 48 }
+
+    private var cornerRadius: CGFloat {
+        AppRadius.slidingScreen * min(abs(offset) / Self.roundingDistance, 1)
+    }
+
+    /// 화면 밖으로 다 나간 카드의 그림자가 가장자리에 남지 않게, 다 나가기 직전부터 옅어진다.
+    private var shadowOpacity: Double {
+        guard abs(offset) > 0 else { return 0 }
+        let remaining = max(width - abs(offset), 0)
+        return AppOpacity.overlay * Double(min(remaining / Self.roundingDistance, 1))
+    }
+
+    func body(content: Content) -> some View {
+        content
+            .background(AppColor.background.ignoresSafeArea())
+            // 밀리는 동안 홈을 둥근 카드로 보이게 한다. 상태 표시줄·홈 인디케이터 영역까지 같은 모양으로 자른다.
+            .mask {
+                RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                    .ignoresSafeArea()
+            }
+            .background {
+                RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                    .fill(AppColor.background)
+                    .shadow(color: AppColor.black.opacity(shadowOpacity), radius: 24)
+                    .ignoresSafeArea()
+            }
+            .offset(x: offset)
     }
 }
 

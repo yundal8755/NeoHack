@@ -40,9 +40,11 @@ struct RoutineDetailView: View {
             AppTopBar(
                 store.state.title,
                 leading: .asset("CaretLeft", label: "뒤로가기") { closeDetail() },
-                trailing: .asset("DotsThree", label: "더보기", isEnabled: !store.state.isBusy && (store.state.isOwner || store.state.isParticipationOwner)) {
-                    isRoutineMenuPresented.toggle()
-                }
+                trailing: store.state.showsMoreMenu
+                    ? .asset("DotsThree", label: "더보기", isEnabled: !store.state.isBusy) {
+                        isRoutineMenuPresented.toggle()
+                    }
+                    : nil
             )
             .overlay(alignment: .topTrailing) {
                 if isRoutineMenuPresented {

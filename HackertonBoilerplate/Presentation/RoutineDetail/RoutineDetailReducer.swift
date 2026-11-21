@@ -56,6 +56,9 @@ nonisolated struct RoutineDetailReducer: Reducer {
         var introduction: String?
         var entity: RoutineDetailEntity?
 
+        /// Figma 1-3: 헤더 더보기(수정·삭제)는 본인 루틴(또는 본인 참여 기록)에만 제공한다.
+        var showsMoreMenu: Bool { isOwner || isParticipationOwner }
+
         var canEdit: Bool {
             let ownsContent = isParticipationResult ? isParticipationOwner : isOwner
             return ownsContent && entity != nil && !isBusy && !isLoading

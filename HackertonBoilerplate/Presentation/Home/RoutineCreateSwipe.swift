@@ -94,10 +94,25 @@ private struct RoutineCreateSwipe<Profile: View>: ViewModifier {
             }
         }
         .simultaneousGesture(dragGesture, isEnabled: !isCommitting && !isProfilePresented)
+        .simultaneousGesture(profileReturnGesture, isEnabled: !isCommitting && isProfilePresented)
         .onChange(of: isReady) { _, ready in
             guard !isCommitting else { return }
             HapticFeedbackManager.shared.impact(style: ready ? .medium : .light)
         }
+    }
+
+    private var profileReturnGesture: some Gesture {
+        DragGesture(minimumDistance: 12)
+            .onEnded { value in
+                let translation = value.translation
+                guard isProfilePresented, width > 0,
+                      translation.width < 0, abs(translation.width) > abs(translation.height) else { return }
+                let isFlick = -value.predictedEndTranslation.width >= width * Self.flickRatio
+                guard -translation.width >= commitDistance || isFlick else { return }
+                HapticFeedbackManager.shared.impact(style: .light)
+                isDragging = false
+                isProfilePresented = false
+            }
     }
 
     private var dragGesture: some Gesture {

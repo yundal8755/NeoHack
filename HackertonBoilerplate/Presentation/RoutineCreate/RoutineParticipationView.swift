@@ -7,24 +7,29 @@ struct RoutineParticipationView: View {
     let repositories: AppContainer.ProfileRepositories
     let onCompleted: (RoutineInteractions) -> Void
     let onCancel: () -> Void
+    let onDraftSaved: () -> Void
     private let expectedSteps: Int
     @StateObject private var store: StoreOf<RoutineCreateReducer>
     @State private var saver: RoutineDraftSaver?
     @State private var saving: Task<Void, Never>?
     @State private var hasJoined: Bool
+    @State private var isRestoring = true
+    @State private var restoreError: String?
+    @State private var restoreAttempt = UUID()
     @State private var error: FeedbackMessage?
 
     init(routineID: String, steps: [RoutineDetailReducer.Step],
          participation: RoutineDetailReducer.Participation,
          repositories: AppContainer.ProfileRepositories,
-         onCompleted: @escaping (RoutineInteractions) -> Void, onCancel: @escaping () -> Void) {
+         onCompleted: @escaping (RoutineInteractions) -> Void, onCancel: @escaping () -> Void,
+         onDraftSaved: @escaping () -> Void) {
         self.routineID = routineID
         self.repositories = repositories
         self.onCompleted = onCompleted
         self.onCancel = onCancel
+        self.onDraftSaved = onDraftSaved
         expectedSteps = steps.count
         _hasJoined = State(initialValue: participation == .joined)
-        // shortcut: 작성 초안은 이 화면에서만 유지한다. 재진입 복원이 필요하면 서버 draft API를 연결한다.
         let forms = steps.map { reference in
             let parts = reference.time.split(separator: ":").compactMap { Int($0) }
             var step = RoutineCreateReducer.Step(
@@ -39,12 +44,28 @@ struct RoutineParticipationView: View {
     }
 
     var body: some View {
-        RoutineCreateView(store: store, isParticipation: true) { outcome in
-            switch outcome {
-            case .cancelled: onCancel()
-            case let .completed(draft):
-                store.send(.outcomeHandled)
-                save(draft)
+        NavigationStack {
+            Group {
+                if let restoreError {
+                    VStack {
+                        AppTopBar("루틴 따라하기", trailing: .exit(onCancel))
+                        ErrorView(title: "임시저장을 불러오지 못했어요", message: restoreError, retryTitle: "다시 시도") {
+                            restoreAttempt = UUID()
+                        }
+                    }
+                } else if isRestoring {
+                    ProgressView("임시저장을 확인하고 있어요")
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                } else {
+                    RoutineCreateView(store: store, isParticipation: true, onSaveDraft: saveDraft) { outcome in
+                        switch outcome {
+                        case .cancelled: onCancel()
+                        case let .completed(draft):
+                            store.send(.outcomeHandled)
+                            save(draft)
+                        }
+                    }
+                }
             }
         }
         .disabled(saving != nil)
@@ -56,8 +77,48 @@ struct RoutineParticipationView: View {
                     .background(AppColor.background, in: RoundedRectangle(cornerRadius: AppRadius.button))
             }
         }
+        .task(id: restoreAttempt) { await restore() }
         .feedbackPopup($error)
         .onDisappear { saving?.cancel() }
+    }
+
+    private func restore() async {
+        isRestoring = true
+        restoreError = nil
+        defer { isRestoring = false }
+        guard hasJoined else { return }
+        let saver = self.saver ?? RoutineDraftSaver(images: repositories.images, routines: repositories.routines)
+        self.saver = saver
+        do {
+            if let draft = try await saver.restoreParticipationDraft(routineID: routineID, steps: store.state.steps) {
+                try Task.checkCancellation()
+                store.send(.draftRestored(steps: draft.steps, title: draft.routineTitle, introduction: draft.routineIntroduction))
+            }
+        } catch is CancellationError {
+        } catch {
+            restoreError = error.localizedDescription
+        }
+    }
+
+    private func saveDraft(_ state: RoutineCreateReducer.State) {
+        guard saving == nil else { return }
+        let saver = self.saver ?? RoutineDraftSaver(images: repositories.images, routines: repositories.routines)
+        self.saver = saver
+        saving = Task {
+            defer { saving = nil }
+            do {
+                if !hasJoined {
+                    _ = try await repositories.routines.interactions(id: routineID, change: .join)
+                    hasJoined = true
+                }
+                try await saver.saveParticipationDraft(state, routineID: routineID)
+                try Task.checkCancellation()
+                onDraftSaved()
+            } catch is CancellationError {
+            } catch {
+                self.error = FeedbackMessage(kind: .error, title: "임시저장하지 못했어요", message: error.localizedDescription)
+            }
+        }
     }
 
     private func save(_ draft: RoutineDraft) {

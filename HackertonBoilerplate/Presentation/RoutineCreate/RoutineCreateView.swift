@@ -9,6 +9,7 @@ struct RoutineCreateView: View {
     typealias Feature = RoutineCreateReducer
 
     @StateObject private var store: StoreOf<Feature>
+    private let onSaveDraft: ((Feature.State) -> Void)?
     private let isParticipation: Bool
     private let onFinish: (Feature.Outcome) -> Void
 
@@ -23,10 +24,11 @@ struct RoutineCreateView: View {
         case routineIntroduction
     }
 
-    init(store: StoreOf<Feature>, isParticipation: Bool = false, onFinish: @escaping (Feature.Outcome) -> Void = { _ in }) {
+    init(store: StoreOf<Feature>, isParticipation: Bool = false, onSaveDraft: ((Feature.State) -> Void)? = nil, onFinish: @escaping (Feature.Outcome) -> Void = { _ in }) {
         _store = StateObject(wrappedValue: store)
         self.onFinish = onFinish
         self.isParticipation = isParticipation
+        self.onSaveDraft = onSaveDraft
     }
 
     private var state: Feature.State { store.state }
@@ -35,7 +37,7 @@ struct RoutineCreateView: View {
         // 스크롤 영역만 키보드를 피하고, 하단 버튼은 키보드를 따라 올라오지 않도록 키보드 영역을 무시한다.
         ZStack(alignment: .bottom) {
             VStack(spacing: 0) {
-                AppTopBar(isParticipation ? "루틴 따라하기" : "루틴 만들기", trailing: .exit { store.send(.exitTapped) })
+                AppTopBar(isParticipation ? "루틴 따라하기" : "루틴 만들기", trailing: .exit { store.send(onSaveDraft == nil ? .exitTapped : .requestExitConfirmation) })
 
                 ScrollView {
                     VStack(spacing: 0) {
@@ -85,14 +87,23 @@ struct RoutineCreateView: View {
         .toolbar(.hidden, for: .navigationBar)
         .accessibilityIdentifier(AccessibilityID.RoutineCreate.screen)
         .alert(
-            Text(verbatim: "루틴 작성을 정말로 취소하시겠습니까?"),
+            Text(verbatim: onSaveDraft == nil ? "루틴 작성을 정말로 취소하시겠습니까?" : "작성 중인 참여 기록을 저장할까요?"),
             isPresented: Binding(
                 get: { state.isExitAlertPresented },
                 set: { if !$0 { store.send(.exitCancelled) } }
             )
         ) {
-            Button(role: .cancel) { store.send(.exitCancelled) } label: { Text(verbatim: "취소") }
-            Button(role: .destructive) { store.send(.exitConfirmed) } label: { Text(verbatim: "확인") }
+            Button(role: .cancel) { store.send(.exitCancelled) } label: { Text(verbatim: onSaveDraft == nil ? "취소" : "계속 작성") }
+            if let onSaveDraft {
+                Button("임시저장 후 나가기") {
+                    store.send(.exitCancelled)
+                    focusedField = nil
+                    onSaveDraft(state)
+                }
+            }
+            Button(role: .destructive) { store.send(.exitConfirmed) } label: {
+                Text(verbatim: onSaveDraft == nil ? "확인" : "저장하지 않고 나가기")
+            }
         }
         .timePickerSheet(
             isPresented: Binding(

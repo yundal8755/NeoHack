@@ -145,6 +145,8 @@ public struct RoutineCreateReducer: Reducer {
         case outcomeHandled
         case completeTapped
         case exitTapped
+        case requestExitConfirmation
+        case draftRestored(steps: [Step], title: String, introduction: String)
         case exitCancelled
         case exitConfirmed
     }
@@ -200,6 +202,14 @@ public struct RoutineCreateReducer: Reducer {
             guard state.page == .introduction, state.isCompleteEnabled else { break }
             state.outcome = .completed(makeDraft(from: state))
 
+        case let .draftRestored(steps, title, introduction):
+            state.steps = steps
+            state.routineTitle = title
+            state.routineIntroduction = introduction
+            let index = steps.firstIndex(where: { !$0.isValid })
+            state.page = index.map(Page.step) ?? .introduction
+        case .requestExitConfirmation:
+            state.isExitAlertPresented = true
         case .exitTapped:
             if state.hasInput {
                 state.isExitAlertPresented = true

@@ -25,10 +25,15 @@ public enum AccessibilityID {
         public static let screen = "routineDetail.screen"
         public static let likeButton = "routineDetail.likeButton"
         public static let commentsButton = "routineDetail.commentsButton"
+        public static let participantsButton = "routineDetail.participantsButton"
         public static let allCommentsButton = "routineDetail.allCommentsButton"
         public static let participateButton = "routineDetail.participateButton"
         public static let commentField = "routineDetail.commentField"
         public static let submitCommentButton = "routineDetail.submitCommentButton"
+    }
+    public enum RoutineParticipants {
+        public static let screen = "routineParticipants.screen"
+        public static func row(_ id: String) -> String { "routineParticipants.row.\(id)" }
     }
     public enum Root {
         public static let homeScreen = "root.homeScreen"

@@ -7,6 +7,7 @@ struct RoutineDetailView: View {
     @State private var deletingCommentID: String?
     @State private var isDeleteRoutinePresented = false
     @State private var isRoutineMenuPresented = false
+    @State private var isParticipantsPresented = false
     @State private var isCommentsPresented = false
     @State private var isParticipationPresented = false
     private let session: ProfileSession?
@@ -31,7 +32,7 @@ struct RoutineDetailView: View {
     var body: some View {
         VStack(spacing: 0) {
             AppTopBar(
-                store.state.title,
+                store.state.navigationTitle,
                 leading: .asset("CaretLeft", label: "뒤로가기") { closeDetail() },
                 trailing: .asset("DotsThree", label: "더보기", isEnabled: !store.state.isBusy && (store.state.isOwner || store.state.isParticipationOwner)) {
                     isRoutineMenuPresented.toggle()
@@ -69,14 +70,7 @@ struct RoutineDetailView: View {
                 ScrollViewReader { proxy in
                     ScrollView {
                         VStack(alignment: .leading, spacing: 0) {
-                            if store.state.isParticipationResult, let introduction = store.state.introduction,
-                               !introduction.isEmpty {
-                                Text(introduction)
-                                    .appFont(AppFont.caption1)
-                                    .foregroundStyle(AppColor.textSecondary)
-                                    .frame(maxWidth: .infinity, alignment: .leading)
-                                    .padding(.top, AppSpacing.md)
-                            }
+                            detailHeader
                             ForEach(Array(store.state.steps.enumerated()), id: \.element.id) { index, step in
                                 stepCard(step, number: index + 1)
                             }
@@ -125,8 +119,43 @@ struct RoutineDetailView: View {
 
                         }
                         .padding(.horizontal, AppSpacing.md)
+                        .padding(.bottom, store.state.isParticipationResult ? AppSpacing.md : 65 + AppSpacing.md)
                     }
                     .scrollDismissesKeyboard(.interactively)
+                    .onChange(of: store.state.comments.count) { _, _ in
+                        if isCommentFocused && !isCommentsPresented {
+                            withAnimation { proxy.scrollTo("commentPreviewEnd", anchor: .bottom) }
+                        }
+                    }
+                }
+            }
+        }
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            if !store.state.isParticipationResult, !isCommentsPresented,
+               store.state.loaded || !store.state.isLive {
+                commentBar
+                    .overlay(alignment: .topTrailing) {
+                        if session != nil {
+                            Button {
+                                isCommentFocused = false
+                                isParticipantsPresented = true
+                            } label: {
+                                Image("ParticipantsButton").frame(width: 65, height: 65)
+                            }
+                            .buttonStyle(.plain)
+                            .accessibilityLabel("함께한 사람들 보기")
+                            .accessibilityIdentifier(AccessibilityID.RoutineDetail.participantsButton)
+                            .padding(.trailing, AppSpacing.md)
+                            .offset(y: -(65 + AppSpacing.md))
+                        }
+                    }
+            }
+        }
+        .navigationDestination(isPresented: $isParticipantsPresented) {
+            if let session, let routineID {
+                RoutineParticipantsDestination(routineID: routineID, title: store.state.title, session: session) {
+                    isParticipantsPresented = false
+                    store.send(.load)
                 }
             }
         }
@@ -148,8 +177,9 @@ struct RoutineDetailView: View {
             }
         }
         .fullScreenCover(isPresented: $isParticipationPresented, onDismiss: {
-            if store.state.participation == .completed { onParticipationCompleted() }
-            else { store.send(.load) }
+            if store.state.participation == .completed {
+                onParticipationCompleted()
+            } else { store.send(.load) }
         }) {
             if let session, let routineID {
                 RoutineParticipationView(routineID: routineID, steps: store.state.steps,
@@ -157,6 +187,8 @@ struct RoutineDetailView: View {
                     store.send(.interactionUpdated($0))
                     isParticipationPresented = false
                 } onCancel: {
+                    isParticipationPresented = false
+                } onDraftSaved: {
                     isParticipationPresented = false
                 }
             }
@@ -178,6 +210,46 @@ struct RoutineDetailView: View {
             },
             set: { if $0 == nil { store.send(.noticeDismissed) } }
         ))
+    }
+
+    private static let detailDateFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.timeZone = TimeZone(identifier: "Asia/Seoul")
+        formatter.dateFormat = "yyyy. MM. dd. HH:mm"
+        return formatter
+    }()
+
+    private var detailHeader: some View {
+        VStack(alignment: .leading, spacing: AppSpacing.md) {
+            HStack(spacing: AppSpacing.xs) {
+                ProfileAvatar(url: store.state.authorImageURL, size: store.state.isParticipationResult ? 35 : 44)
+                Text(store.state.authorNickname ?? "")
+                    .appFont(AppFont.body2)
+                    .lineLimit(1)
+                Spacer(minLength: AppSpacing.xs)
+                if let date = store.state.createdAt {
+                    Text(Self.detailDateFormatter.string(from: date))
+                        .appFont(AppFont.caption2)
+                        .foregroundStyle(AppColor.textSecondary)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.8)
+                }
+            }
+            if store.state.isParticipationResult {
+                Text(store.state.title)
+                    .appFont(AppFont.body2.weight(.semiBold))
+                    .lineLimit(1)
+                if let introduction = store.state.introduction, !introduction.isEmpty {
+                    Text(introduction)
+                        .appFont(AppFont.caption1)
+                        .foregroundStyle(AppColor.textSecondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.top, store.state.isParticipationResult ? AppSpacing.md : 0)
     }
 
     private func closeDetail() {
@@ -271,15 +343,14 @@ struct RoutineDetailView: View {
     private var participateButton: some View {
         if !store.state.isOwner && !store.state.isParticipationResult {
             VStack(spacing: AppSpacing.xxs) {
-                PrimaryButton(store.state.participation == .joined ? "참여 기록 작성" : store.state.participation.rawValue) {
+                PrimaryButton(store.state.participation == .joined ? "이어서 작성" : store.state.participation.rawValue) {
                     if session != nil { isParticipationPresented = true }
                     else { store.send(.participateTapped) }
                 }
                 .disabled(store.state.participation == .completed || store.state.isBusy || store.state.steps.isEmpty)
                 .accessibilityIdentifier(AccessibilityID.RoutineDetail.participateButton)
                 if store.state.participation == .joined {
-                    Button("참여 취소") { store.send(.leaveTapped) }
-                        .appFont(AppFont.caption1)
+                    PrimaryButton("참여 취소", style: .secondary) { store.send(.leaveTapped) }
                         .disabled(store.state.isBusy)
                 }
             }
@@ -338,29 +409,47 @@ struct RoutineDetailView: View {
             .accessibilityHidden(true)
     }
 
-    private var commentInput: some View {
-        HStack(alignment: .top, spacing: AppSpacing.sm) {
-            avatar
-            VStack(alignment: .trailing, spacing: AppSpacing.xs) {
-                AppTextField("댓글을 남겨주세요.", text: Binding(
-                    get: { store.state.commentDraft },
-                    set: { store.send(.commentChanged($0)) }
-                ), axis: .vertical, maxLength: 50)
-                .focused($isCommentFocused)
-                .accessibilityIdentifier(AccessibilityID.RoutineDetail.commentField)
+    private var commentBar: some View {
+        commentInput
+            .padding(.horizontal, AppSpacing.md)
+            .padding(.top, AppSpacing.lg)
+            .padding(.bottom, AppSpacing.md)
+            .background(AppColor.background)
+            .overlay(alignment: .top) {
+                Rectangle().fill(AppColor.gray200).frame(height: 1)
+            }
+    }
 
-                if store.state.editingCommentID != nil {
-                    Button("수정 취소") { store.send(.cancelEditing) }
-                        .frame(minHeight: 44)
+    private var commentInput: some View {
+        HStack(alignment: .center, spacing: AppSpacing.sm) {
+            ProfileAvatar(url: session?.profileImageURL, size: 41)
+            AppTextField("댓글을 남겨주세요.", text: Binding(
+                get: { store.state.commentDraft },
+                set: { store.send(.commentChanged($0)) }
+            ), maxLength: 50)
+            .focused($isCommentFocused)
+            .submitLabel(.send)
+            .onSubmit {
+                if store.state.canSubmitComment && !store.state.isBusy { store.send(.submitCommentTapped) }
+            }
+            .accessibilityIdentifier(AccessibilityID.RoutineDetail.commentField)
+
+            if store.state.editingCommentID != nil {
+                Button { store.send(.cancelEditing) } label: {
+                    Image(systemName: "xmark").frame(width: 44, height: 44)
                 }
-                if store.state.canSubmitComment {
-                    Button(store.state.editingCommentID == nil ? "등록" : "수정 완료") { store.send(.submitCommentTapped) }
-                        .disabled(store.state.isBusy)
-                        .font(AppFont.calloutStrong)
-                        .foregroundStyle(AppColor.primary)
-                        .frame(minWidth: 44, minHeight: 44)
-                        .accessibilityIdentifier(AccessibilityID.RoutineDetail.submitCommentButton)
-                }
+                .buttonStyle(.plain)
+                .foregroundStyle(AppColor.textSecondary)
+                .accessibilityLabel("댓글 수정 취소")
+            }
+            if store.state.canSubmitComment {
+                Button(store.state.editingCommentID == nil ? "등록" : "수정") { store.send(.submitCommentTapped) }
+                    .disabled(store.state.isBusy)
+                    .buttonStyle(.plain)
+                    .font(AppFont.calloutStrong)
+                    .foregroundStyle(AppColor.primary)
+                    .frame(minWidth: 44, minHeight: 44)
+                    .accessibilityIdentifier(AccessibilityID.RoutineDetail.submitCommentButton)
             }
         }
     }
@@ -433,9 +522,7 @@ struct RoutineDetailView: View {
         }
         .scrollDismissesKeyboard(.interactively)
         .safeAreaInset(edge: .bottom, spacing: 0) {
-            commentInput
-                .padding(AppSpacing.md)
-                .background(AppColor.background)
+            commentBar
         }
         .onChange(of: store.state.comments.count) { _, _ in
             withAnimation { proxy.scrollTo("commentsBottom", anchor: .bottom) }

@@ -54,6 +54,20 @@ nonisolated struct RoutineDetailReducer: Reducer {
     struct State: Equatable {
         var title: String
         var introduction: String?
+        var originalAuthorNickname: String?
+        var authorNickname: String?
+        var authorImageURL: URL?
+        var createdAt: Date?
+
+        var navigationTitle: String {
+            if isParticipationResult, let originalAuthorNickname, let authorNickname {
+                return "\(originalAuthorNickname)의 하루: \(authorNickname)"
+            }
+            if !isParticipationResult, let authorNickname {
+                return "\(authorNickname)의 하루"
+            }
+            return title
+        }
         var steps: [Step]
         var comments: [Comment]
         var isLiked = false
@@ -107,6 +121,7 @@ nonisolated struct RoutineDetailReducer: Reducer {
     enum Action {
         case load
         case loaded(RoutineDetailEntity, [RoutineCommentEntity], RoutineInteractions)
+        case sourceAuthorReceived(String)
         case loadFailed(String)
         case interactionUpdated(RoutineInteractions)
         case commentSaved(RoutineCommentEntity)
@@ -136,7 +151,10 @@ nonisolated struct RoutineDetailReducer: Reducer {
             return .run { send in
                 do {
                     if resultParticipantID != nil {
-                        let detail = try await fetchDetail(routines, id: id)
+                        async let source = routines.detail(id: id)
+                        async let result = fetchDetail(routines, id: id)
+                        let (original, detail) = try await (source, result)
+                        await send(.sourceAuthorReceived(original.owner?.nickname ?? "작성자"))
                         await send(.loaded(detail, [], .init(likeCount: 0, likedByMe: false,
                             inProgressCount: 0, completedCount: 0, participation: .completed)))
                         return
@@ -152,6 +170,9 @@ nonisolated struct RoutineDetailReducer: Reducer {
             state.loaded = true
             state.title = detail.title
             state.introduction = detail.content
+            state.authorNickname = detail.owner?.nickname
+            state.authorImageURL = detail.owner?.profileImageURL
+            state.createdAt = detail.createdAt
             state.isOwner = resultParticipantID == nil && (userID.map { detail.owner?.id == $0 } ?? false)
             state.isParticipationOwner = resultParticipantID != nil && resultParticipantID == userID
                 && detail.owner?.id == userID
@@ -163,6 +184,8 @@ nonisolated struct RoutineDetailReducer: Reducer {
             state.comments = comments.map(Self.comment)
             state.commentCount = state.comments.count
             apply(interactions, to: &state)
+        case .sourceAuthorReceived(let title):
+            state.originalAuthorNickname = title
         case .loadFailed(let message):
             state.isLoading = false
             state.loadError = message

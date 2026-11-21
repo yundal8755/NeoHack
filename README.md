@@ -30,7 +30,9 @@ brew install xcbeautify
 
 ## 서버 설정
 
-`Config/AppConfig.local.example.xcconfig`를 `Config/AppConfig.local.xcconfig`로 복사해 `API_BASE_URL`을 설정합니다. xcconfig의 URL에서 `//`는 `/$()/`로 표기합니다. 로컬 설정 파일은 Git에서 제외됩니다.
+기본 API 서버는 [https://neo8.duckdns.org/](https://neo8.duckdns.org/)이며 `Config/AppConfig.xcconfig`에 설정되어 있습니다. 다른 서버를 사용할 때만 `Config/AppConfig.local.example.xcconfig`를 `Config/AppConfig.local.xcconfig`로 복사해 `API_BASE_URL`을 덮어씁니다. xcconfig의 URL에서 `//`는 `/$()/`로 표기합니다. 로컬 설정 파일은 Git에서 제외됩니다.
+
+Swagger·ERD 링크와 현재 DTO 범위는 [서버 연결 가이드](Docs/APICollaboration.md)를 참고합니다.
 
 ## 디자인 구현
 

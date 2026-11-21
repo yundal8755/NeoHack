@@ -18,15 +18,16 @@
 ## UI 개발
 
 - Figma에서 구현할 프레임의 링크를 복사해 구현을 요청합니다. 세부 절차는 [AGENTS.md](../AGENTS.md)를 따릅니다.
-- 화면은 `Presentation/<Feature>`에 View와 Reducer로 구성합니다. State와 Action은 Reducer 내부에 정의합니다.
+- 화면은 View(`Presentation/<Feature>`)와 Reducer(`Packages/HackertonCore/Sources/HackertonCore/Feature/<Feature>`)로 구성합니다. State와 Action은 Reducer 내부에 정의합니다.
+- Reducer 테스트와 화면 스냅샷 테스트를 함께 추가합니다. 방법은 [테스트 가이드](Testing.md)를 따릅니다.
 - 주입받은 Repository가 반환하는 Entity를 화면 상태에 반영합니다.
 - 필요한 Entity 필드·타입을 서버 연결 담당에게 전달합니다.
 - 서버 응답 DTO 해석과 Mapper 구현은 서버 연결 담당이 맡습니다.
 
 ## 서버 연결·테스트·기타 작업
 
-- `Data/<Feature>`의 Endpoint, DTO, Mapper, Repository를 온전히 담당합니다.
-- `Entity/<Feature>`에 UI에서 사용할 모델을 올바르게 구성합니다.
+- 앱 `Data/<Feature>`의 Endpoint와 Repository 구현체, 패키지의 DTO·Mapper·Repository 프로토콜·Mock을 온전히 담당합니다.
+- 패키지 `Entity/<Feature>`에 UI에서 사용할 모델을 올바르게 구성합니다.
 - 실제 서버 응답을 DTO로 받고 Mapper를 통해 Entity로 변환해 전달합니다.
 - AppContainer에서 Repository를 생성하고 UI에 연결할 수 있도록 준비합니다.
 - 서버 응답, 매핑 결과, 화면 연결을 테스트하고 정상·빈 결과·오류 상황을 확인합니다.

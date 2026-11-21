@@ -1,10 +1,6 @@
 import Foundation
+import HackertonCore
 import Security
-
-protocol TokenStoring {
-    var accessToken: String? { get set }
-    func clear()
-}
 
 final class KeychainTokenStore: TokenStoring {
     private let service: String

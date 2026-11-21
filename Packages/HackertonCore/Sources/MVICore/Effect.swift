@@ -1,10 +1,10 @@
 import Foundation
 
-struct Effect<Action>: @unchecked Sendable {
-    let caseOf: EffectCase
-    let taskID: _CancelID?
+public struct Effect<Action>: @unchecked Sendable {
+    package let caseOf: EffectCase
+    package let taskID: _CancelID?
 
-    init(caseOf: EffectCase, taskID: AnyHashable? = nil) {
+    package init(caseOf: EffectCase, taskID: AnyHashable? = nil) {
         self.caseOf = caseOf
 
         if let taskID {
@@ -14,28 +14,28 @@ struct Effect<Action>: @unchecked Sendable {
         }
     }
 
-    enum EffectCase {
+    package enum EffectCase {
         case none
         case run(TaskPriority? = nil, (_ send: @escaping (Action) async -> Void) async -> Void)
         case cancel
     }
 
-    static var none: Self {
+    public static var none: Self {
         Self(caseOf: .none)
     }
 
-    static func run(
+    public static func run(
         priority: TaskPriority? = nil,
         task: @escaping (_ send: @escaping (Action) async -> Void) async -> Void
     ) -> Self {
         Self(caseOf: .run(priority, task))
     }
 
-    static func cancel(id: some Hashable) -> Self {
+    public static func cancel(id: some Hashable) -> Self {
         Self(caseOf: .cancel, taskID: id)
     }
 
-    func cancelTask(id: some Hashable) -> Self {
+    public func cancelTask(id: some Hashable) -> Self {
         switch caseOf {
         case .none:
             .none

@@ -4,8 +4,8 @@ import SwiftUI
 /// Figma `상단바` 컴포넌트. 가운데 제목과 좌우 항목(아이콘 또는 텍스트)으로 구성한다.
 ///
 /// Figma 변형별 사용 예:
-/// - 홈: `AppTopBar("서비스명", leading: .add {}, trailing: .profile {})`
-/// - 상세: `AppTopBar("서비스명", leading: .back {})`
+/// - 홈: `AppTopBar(AppBrand.serviceName, leading: .add {}, trailing: .profile {})`
+/// - 상세: `AppTopBar(AppBrand.serviceName, leading: .back {})`
 /// - 루틴 만들기: `AppTopBar("루틴 만들기", trailing: .exit {})`
 /// - 루틴 상세: `AppTopBar("김햄찌의 하루", leading: .back {}, trailing: .more {})`
 ///
@@ -22,9 +22,16 @@ struct AppTopBar: View {
         let content: Content
         let action: () -> Void
         var isEnabled = true
+        /// 화면별 UI 테스트 식별자. 없으면 위치에 따라 `AccessibilityID.TopBar`의 기본값을 쓴다.
+        var accessibilityID: String?
 
-        static func asset(_ name: String, label: String, isEnabled: Bool = true, action: @escaping () -> Void) -> Item {
-            Item(content: .asset(name: name, label: label), action: action, isEnabled: isEnabled)
+        static func asset(
+            _ name: String, label: String, isEnabled: Bool = true, accessibilityID: String? = nil,
+            action: @escaping () -> Void
+        ) -> Item {
+            Item(
+                content: .asset(name: name, label: label), action: action, isEnabled: isEnabled,
+                accessibilityID: accessibilityID)
         }
 
         static func icon(_ systemName: String, label: String, action: @escaping () -> Void) -> Item {
@@ -79,13 +86,13 @@ struct AppTopBar: View {
                 if let leading {
                     itemView(leading)
                         .disabled(!leading.isEnabled)
-                        .accessibilityIdentifier(AccessibilityID.TopBar.leadingButton)
+                        .accessibilityIdentifier(leading.accessibilityID ?? AccessibilityID.TopBar.leadingButton)
                 }
                 Spacer(minLength: 0)
                 if let trailing {
                     itemView(trailing)
                         .disabled(!trailing.isEnabled)
-                        .accessibilityIdentifier(AccessibilityID.TopBar.trailingButton)
+                        .accessibilityIdentifier(trailing.accessibilityID ?? AccessibilityID.TopBar.trailingButton)
                 }
             }
         }
@@ -140,8 +147,8 @@ struct AppTopBar: View {
 
 #Preview {
     VStack(spacing: AppSpacing.lg) {
-        AppTopBar("서비스명", leading: .add {}, trailing: .profile {})
-        AppTopBar("서비스명", leading: .back {})
+        AppTopBar(AppBrand.serviceName, leading: .add {}, trailing: .profile {})
+        AppTopBar(AppBrand.serviceName, leading: .back {})
         AppTopBar("루틴 만들기", trailing: .exit {})
         AppTopBar("김햄찌의 하루", leading: .back {}, trailing: .more {})
     }

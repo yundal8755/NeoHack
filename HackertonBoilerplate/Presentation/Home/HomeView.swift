@@ -21,7 +21,10 @@ struct HomeView: View {
         NavigationStack(path: $navigationPath) {
             VStack(spacing: 0) {
                 AppTopBar(
-                    "서비스명",
+                    AppBrand.serviceName,
+                    leading: .asset("Plus", label: "루틴 만들기", accessibilityID: AccessibilityID.Home.createButton) {
+                        isPickingRoutineImages = true
+                    },
                     trailing: .asset("User", label: "마이프로필") {
                         isProfilePresented = true
                     })
@@ -31,18 +34,6 @@ struct HomeView: View {
                 routineList
             }
             .background(AppColor.background)
-            .overlay(alignment: .bottomTrailing) {
-                Button {
-                    isPickingRoutineImages = true
-                } label: {
-                    Image("HomeCreateButton")
-                        .frame(width: 55, height: 55)
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel("루틴 만들기")
-                .accessibilityIdentifier(AccessibilityID.Home.createButton)
-                .padding(AppSpacing.md)
-            }
             .routineCreateSwipe(
                 profile: profileView, isProfilePresented: $isProfilePresented, isDragging: $isHomeDragging
             ) {
@@ -194,7 +185,7 @@ struct HomeView: View {
                 }
             }
             .padding(.horizontal, AppSpacing.md)
-            .padding(.bottom, 88)
+            .padding(.bottom, AppSpacing.lg)
         }
         .refreshable {
             store.send(.refresh)

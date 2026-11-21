@@ -37,6 +37,12 @@ public enum AccessibilityID {
         public static let screen = "splash.screen"
     }
 
+    public enum Onboarding {
+        public static let screen = "onboarding.screen"
+        public static let nextButton = "onboarding.nextButton"
+        public static func page(_ index: Int) -> String { "onboarding.page.\(index)" }
+    }
+
     public enum RoutineCreate {
         /// 사진을 고르기 전 루틴 만들기 진입 화면.
         public static let entry = "routineCreate.entry"

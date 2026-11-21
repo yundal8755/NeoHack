@@ -17,7 +17,9 @@ struct HackertonBoilerplateApp: App {
     var body: some Scene {
         WindowGroup {
             SplashContainer(showsSplash: AppContainer.shared.configuration.showsSplash) {
-                RootView()
+                OnboardingContainer(isEnabled: AppContainer.shared.configuration.showsOnboarding) {
+                    RootView()
+                }
             }
         }
     }

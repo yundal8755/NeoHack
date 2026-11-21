@@ -37,6 +37,11 @@ public struct AppLaunchConfiguration: Equatable, Sendable {
         dataMode == .live
     }
 
+    /// 목 모드는 UI 테스트가 홈 화면부터 조작하므로 첫 실행 온보딩도 건너뛴다.
+    public var showsOnboarding: Bool {
+        dataMode == .live
+    }
+
     public static var current: Self {
         Self(arguments: ProcessInfo.processInfo.arguments)
     }

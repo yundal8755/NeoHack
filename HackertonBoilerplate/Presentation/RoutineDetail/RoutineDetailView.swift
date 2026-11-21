@@ -17,7 +17,7 @@ struct RoutineDetailView: View {
     @State private var isEditPresented = false
     @State private var selectedProfile: ProfileRoute?
 
-    private struct ProfileRoute: Identifiable {
+    private struct ProfileRoute: Identifiable, Hashable {
         let id: String
     }
     private let onParticipationCompleted: () -> Void
@@ -230,18 +230,10 @@ struct RoutineDetailView: View {
                     onCancel: { isEditPresented = false })
             }
         }
-        .sheet(isPresented: $isResultsPresented) {
-            if let session, let routineID {
-                ParticipationResultsView(routineID: routineID, session: session) {
-                    store.send(.load)
-                    onUpdated()
-                }
-            }
-        }
-        .navigationDestination(isPresented: $isPublicProfilePresented) {
-            if let session, let owner = store.state.entity?.owner {
-                PublicProfileView(publicID: owner.id, users: session.repositories.users, session: session, onBack: {
-                    isPublicProfilePresented = false
+        .navigationDestination(item: $selectedProfile) { profile in
+            if let session {
+                PublicProfileView(publicID: profile.id, users: session.repositories.users, session: session, onBack: {
+                    selectedProfile = nil
                     store.send(.load)
                 })
             }

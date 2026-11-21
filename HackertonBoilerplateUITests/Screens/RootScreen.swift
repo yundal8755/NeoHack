@@ -9,4 +9,9 @@ struct RootScreen {
     var homeScreen: XCUIElement {
         app.descendants(matching: .any)[AccessibilityID.Root.homeScreen]
     }
+
+    /// 루틴 만들기 진입 화면(사진 선택 전).
+    var routineCreateEntry: XCUIElement {
+        app.descendants(matching: .any)[AccessibilityID.RoutineCreate.entry]
+    }
 }

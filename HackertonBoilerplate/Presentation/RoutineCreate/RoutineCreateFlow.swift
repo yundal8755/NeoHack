@@ -71,6 +71,7 @@ private struct RoutineCreateEntry: View {
                     .overlay {
                         if isLoading { ProgressView() }
                     }
+                    .accessibilityIdentifier(AccessibilityID.RoutineCreate.entry)
             }
         }
         .photosPicker(

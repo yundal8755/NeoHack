@@ -9,6 +9,8 @@ public enum AccessibilityID {
     }
 
     public enum RoutineCreate {
+        /// 사진을 고르기 전 루틴 만들기 진입 화면.
+        public static let entry = "routineCreate.entry"
         public static let screen = "routineCreate.screen"
         public static let stepImage = "routineCreate.stepImage"
         public static let timeChip = "routineCreate.timeChip"

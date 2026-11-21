@@ -20,6 +20,12 @@ scripts/test.sh        # 로직 테스트 (Packages/HackertonCore, swift test)
 scripts/test.sh app    # 스냅샷 + UI 테스트 (시뮬레이터)
 ```
 
+UI 테스트 로그를 보기 좋게 보려면 [xcbeautify](https://github.com/cpisciotta/xcbeautify) 설치를 권장합니다(선택). 설치하지 않아도 테스트는 똑같이 동작합니다.
+
+```bash
+brew install xcbeautify
+```
+
 자세한 내용은 [테스트 가이드](Docs/Testing.md)를 참고합니다.
 
 ## 서버 설정

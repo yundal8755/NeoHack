@@ -27,6 +27,7 @@ run_app() {
         "${command[@]}" | xcbeautify
     else
         # xcbeautify가 없으면 빌드 오류, 실패한 테스트와 이유, 최종 결과만 남긴다.
+        echo "💡 xcbeautify를 설치하면 빌드·테스트 로그를 더 보기 좋게 볼 수 있어요 (선택): brew install xcbeautify" >&2
         "${command[@]}" 2>&1 | grep -E --line-buffered \
             '(error:|^✘|^ +(open|Re-run|↳)|^✔ Test run|Test Case .*(passed|failed)|XCTAssert|\*\* .* \*\*)'
     fi

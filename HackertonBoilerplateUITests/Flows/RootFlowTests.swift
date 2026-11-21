@@ -40,7 +40,7 @@ final class RootFlowTests: XCTestCase {
         let screen = RootScreen(app: app)
         XCTAssertTrue(screen.homeScreen.waitForExistence(timeout: 10))
         screen.homeScreen.swipeLeft()
-        XCTAssertTrue(app.staticTexts["프로필 화면을 준비하고 있어요."].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.otherElements[AccessibilityID.MyProfile.screen].waitForExistence(timeout: 5))
         app.buttons[AccessibilityID.TopBar.leadingButton].tap()
         XCTAssertTrue(app.buttons[AccessibilityID.Home.createButton].waitForExistence(timeout: 5))
     }

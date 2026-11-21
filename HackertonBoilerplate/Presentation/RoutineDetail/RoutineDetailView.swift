@@ -109,6 +109,8 @@ struct RoutineDetailView: View {
             commentsSheet
                 .presentationDetents([.medium, .large])
                 .presentationDragIndicator(.visible)
+                .presentationBackground(AppColor.background)
+                .preferredColorScheme(.light)
         }
         .background(AppColor.background)
         .toolbar(.hidden, for: .navigationBar)
@@ -301,28 +303,10 @@ struct RoutineDetailView: View {
     private var commentsSheet: some View {
         NavigationStack {
             ScrollViewReader { proxy in
-                ScrollView {
-                    LazyVStack(spacing: AppSpacing.xxs) {
-                        if store.state.comments.isEmpty {
-                            Text("첫 댓글을 남겨보세요.")
-                                .foregroundStyle(AppColor.textSecondary)
-                                .padding(.vertical, AppSpacing.lg)
-                        }
-                        ForEach(store.state.comments) { comment in
-                            commentRow(comment).id(comment.id)
-                        }
-                        Color.clear.frame(height: 1).id("commentsBottom")
-                    }
-                    .padding(.horizontal, AppSpacing.md)
-                }
-                .scrollDismissesKeyboard(.interactively)
-                .safeAreaInset(edge: .bottom, spacing: 0) {
-                    commentInput
-                        .padding(AppSpacing.md)
-                        .background(AppColor.background)
-                }
-                .onChange(of: store.state.comments.count) { _, _ in
-                    withAnimation { proxy.scrollTo("commentsBottom", anchor: .bottom) }
+                if #available(iOS 26.0, *) {
+                    commentsScroll(proxy: proxy).scrollEdgeEffectHidden()
+                } else {
+                    commentsScroll(proxy: proxy)
                 }
             }
             .alert("정말로 댓글을 삭제하시겠습니까?", isPresented: Binding(
@@ -335,6 +319,9 @@ struct RoutineDetailView: View {
                     deletingCommentID = nil
                 }
             }
+            .background(AppColor.background)
+            .toolbarBackground(AppColor.background, for: .navigationBar)
+            .toolbarBackground(.visible, for: .navigationBar)
             .navigationTitle("댓글 \(store.state.commentCount)")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -343,6 +330,33 @@ struct RoutineDetailView: View {
                 }
             }
         }
+    }
+
+    private func commentsScroll(proxy: ScrollViewProxy) -> some View {
+        ScrollView {
+            LazyVStack(spacing: AppSpacing.xxs) {
+                if store.state.comments.isEmpty {
+                    Text("첫 댓글을 남겨보세요.")
+                        .foregroundStyle(AppColor.textSecondary)
+                        .padding(.vertical, AppSpacing.lg)
+                }
+                ForEach(store.state.comments) { comment in
+                    commentRow(comment).id(comment.id)
+                }
+                Color.clear.frame(height: 1).id("commentsBottom")
+            }
+            .padding(.horizontal, AppSpacing.md)
+        }
+        .scrollDismissesKeyboard(.interactively)
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            commentInput
+                .padding(AppSpacing.md)
+                .background(AppColor.background)
+        }
+        .onChange(of: store.state.comments.count) { _, _ in
+            withAnimation { proxy.scrollTo("commentsBottom", anchor: .bottom) }
+        }
+        .background(AppColor.background)
     }
 
 }

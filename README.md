@@ -26,7 +26,7 @@ UI 테스트 로그를 보기 좋게 보려면 [xcbeautify](https://github.com/c
 brew install xcbeautify
 ```
 
-`dev`·`main`으로 push할 때 테스트를 자동으로 돌리려면 클론 후 한 번 hook을 활성화합니다.
+클론 후 한 번 git hook을 활성화합니다. `dev`·`main`으로 push할 때 테스트를 자동으로 돌리고, 스킴에서 테스트 대상이 빠진 채 커밋되는 것을 막습니다.
 
 ```bash
 git config core.hooksPath .githooks

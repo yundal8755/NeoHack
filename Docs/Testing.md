@@ -129,3 +129,10 @@ git config core.hooksPath .githooks
 - 기본은 패키지 로직 테스트(`core`)만 실행한다. 화면을 바꿨으면 `PRE_PUSH_TESTS=all git push origin <브랜치>:dev`로 스냅샷·UI 테스트까지 실행한다.
 - 테스트는 현재 작업 폴더 기준으로 돈다. 커밋하지 않은 변경이 있으면 경고를 띄운다.
 - `git push --no-verify`로 건너뛸 수 있지만 쓰지 않는다.
+
+## 커밋 전 스킴 검사
+
+`.githooks/pre-commit`은 공유 스킴(`HackertonBoilerplate.xcscheme`)이 커밋에 포함될 때만 동작한다. 스테이징된 스킴에 `HackertonBoilerplateSnapshotTests`와 `HackertonBoilerplateUITests` 테스트 대상이 없거나 스킴을 삭제하면 커밋을 막는다. Xcode 표준 형식이 아니면 경고만 띄운다. 활성화는 pre-push와 같다(`git config core.hooksPath .githooks`).
+
+- 열린 Xcode가 이전 스킴으로 파일을 덮어써 테스트 대상이 사라지는 일을 막기 위한 검사다. 막히면 Xcode를 종료하고 `git restore --staged --worktree <스킴 경로>`로 되돌린다.
+- 테스트 타깃을 추가·삭제하면 `.githooks/pre-commit`의 `REQUIRED_TESTABLES`도 함께 고친다.

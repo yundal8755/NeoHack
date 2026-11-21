@@ -1,0 +1,48 @@
+#!/usr/bin/env bash
+# 공유 스킴에서 테스트 대상이 빠진 채로 커밋되는 것을 막는다.
+#
+#   설치(클론마다 한 번):  git config core.hooksPath .githooks
+#   배경: 열린 Xcode가 이전 스킴으로 파일을 덮어써 테스트 대상이 사라진 적이 있다.
+#   테스트 대상을 일부러 바꿀 때는 아래 REQUIRED_TESTABLES를 함께 고친다.
+set -euo pipefail
+
+SCHEME="HackertonBoilerplate.xcodeproj/xcshareddata/xcschemes/HackertonBoilerplate.xcscheme"
+REQUIRED_TESTABLES=(
+    "HackertonBoilerplateSnapshotTests.xctest"
+    "HackertonBoilerplateUITests.xctest"
+)
+
+# 이번 커밋에 스킴이 포함되지 않으면 검사하지 않는다.
+status="$(git diff --cached --name-status -- "$SCHEME")"
+[[ -z "$status" ]] && exit 0
+
+if [[ "$status" == D* ]]; then
+    echo "❌ 공유 스킴($SCHEME)을 삭제하는 커밋이에요. scripts/test.sh app 이 이 스킴을 사용해요." >&2
+    exit 1
+fi
+
+# 작업 폴더가 아니라 실제로 커밋될 내용(스테이징된 파일)을 검사한다.
+staged="$(git show ":$SCHEME")"
+
+# <Testables> 블록만 잘라 BuildableName을 찾는다. Xcode 형식(name = "x")과 한 줄 형식(name="x") 모두 처리한다.
+testables="$(printf '%s\n' "$staged" | sed -n '/<Testables>/,/<\/Testables>/p')"
+missing=()
+for target in "${REQUIRED_TESTABLES[@]}"; do
+    if ! printf '%s\n' "$testables" | grep -Eq "BuildableName[[:space:]]*=[[:space:]]*\"${target//./\\.}\""; then
+        missing+=("${target%.xctest}")
+    fi
+done
+
+if [[ ${#missing[@]} -gt 0 ]]; then
+    echo "❌ 커밋하려는 스킴에서 테스트 대상이 빠졌어요: ${missing[*]}" >&2
+    echo "   열린 Xcode가 이전 스킴으로 덮어썼을 가능성이 커요. Xcode를 종료한 뒤 되돌리세요:" >&2
+    echo "   git restore --staged --worktree \"$SCHEME\"" >&2
+    echo "   테스트 대상을 일부러 바꾼 거라면 .githooks/pre-commit 의 REQUIRED_TESTABLES를 함께 고치세요." >&2
+    exit 1
+fi
+
+if printf '%s\n' "$staged" | grep -q '<Scheme version="'; then
+    echo "⚠️  스킴이 Xcode 표준 형식이 아니에요. Xcode가 열 때 다시 저장해 변경으로 잡힐 수 있어요." >&2
+    echo "   Xcode의 Edit Scheme에서 저장한 형식으로 커밋하는 걸 권장해요." >&2
+fi
+exit 0

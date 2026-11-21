@@ -12,6 +12,12 @@
 - Figma 디자인→코드 및 SwiftUI 스킬을 읽고 Figma MCP에서 디자인 컨텍스트와 스크린샷을 확인한다. 컨텍스트 요청에는 clientLanguages=swift, clientFrameworks=swiftui를 지정한다.
 - Figma의 변수, 타이포그래피, 간격, 컴포넌트 상태를 기존 AppFont, AppColor, AppSpacing, AppRadius와 공용 SwiftUI 컴포넌트에 매핑한다. 제공된 에셋은 앱 에셋 카탈로그에 등록한다. 실제 화면을 빌드한 뒤 시뮬레이터 스크린샷을 원본 프레임과 비교한다.
 
+## Xcode 프로젝트 파일
+
+- `.xcodeproj`(`project.pbxproj`, `.xcscheme`)를 Xcode 밖에서 수정하거나 pull·merge·reset으로 바꾸기 전에 Xcode를 종료한다. 열린 Xcode는 메모리의 이전 내용으로 파일을 다시 저장해 변경을 덮어쓴다.
+- 스킴은 Xcode의 Edit Scheme에서 수정하고 Xcode가 저장한 형식 그대로 커밋한다. 스킴 XML을 직접 작성하거나 한 줄 속성 형식으로 고치지 않는다.
+- 스킴이 변경 목록에 있으면 커밋 전에 `git diff`로 의도한 변경인지 확인한다. 테스트 대상(`HackertonBoilerplateSnapshotTests`, `HackertonBoilerplateUITests`)이 빠진 스킴은 `.githooks/pre-commit`이 커밋을 막는다.
+
 ## 외부 라이브러리와 공통 코드
 
 - 새 기능 구현 전 `Core`와 `App/Constant`의 기존 공통 코드를 먼저 확인하고 우선 재사용한다. 같은 역할의 컴포넌트나 유틸리티를 중복 구현하지 않는다.

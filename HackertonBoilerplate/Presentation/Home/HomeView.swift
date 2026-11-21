@@ -100,12 +100,12 @@ struct HomeView: View {
 
     private func closeProfile() {
         closeDetail()
-        isHomeDragging = false
         isProfilePresented = false
     }
 
     private func showRoutine(_ routine: HomeReducer.Routine) {
-        guard navigationPath.isEmpty else { return }
+        // 홈·프로필 어디서든 가로로 밀다 놓은 동작은 카드 탭으로 처리하지 않는다.
+        guard navigationPath.isEmpty, !isHomeDragging else { return }
         navigationPath = [DetailRoute(id: routine.id, participantID: routine.resultParticipantID, preview: session == nil ? routine.detail : nil)]
     }
 

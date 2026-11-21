@@ -1,10 +1,10 @@
 import Foundation
 
-final actor AnyValueActor<Value> {
+public final actor AnyValueActor<Value> {
     private let defaultValue: Value
     private var value: Value
 
-    init(_ value: @autoclosure @Sendable () throws -> Value) rethrows {
+    public init(_ value: @autoclosure @Sendable () throws -> Value) rethrows {
         self.defaultValue = try value()
         self.value = defaultValue
     }
@@ -12,7 +12,7 @@ final actor AnyValueActor<Value> {
 
 extension AnyValueActor {
     @discardableResult
-    func withValue<T: Sendable>(
+    public func withValue<T: Sendable>(
         _ operation: @Sendable (inout Value) throws -> T
     ) rethrows -> T {
         var value = self.value
@@ -20,11 +20,11 @@ extension AnyValueActor {
         return try operation(&value)
     }
 
-    func setValue(_ newValue: @autoclosure @Sendable () throws -> Value) rethrows {
+    public func setValue(_ newValue: @autoclosure @Sendable () throws -> Value) rethrows {
         self.value = try newValue()
     }
 
-    func resetValue() {
+    public func resetValue() {
         value = defaultValue
     }
 }

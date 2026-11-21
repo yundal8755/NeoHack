@@ -1,4 +1,5 @@
 import Foundation
+import HackertonCore
 
 extension Notification.Name {
     static let authSessionExpired = Notification.Name("auth.sessionExpired")

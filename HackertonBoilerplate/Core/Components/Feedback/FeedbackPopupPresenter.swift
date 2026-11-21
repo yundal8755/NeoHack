@@ -22,7 +22,8 @@ struct FeedbackPopupPresenter: ViewModifier {
                 switch presentation {
                 case .toast(let edge):
                     parameters
-                        .type(.toast)
+                        // .toast는 safe area를 무시하므로 노치·다이내믹 아일랜드를 피하는 floater를 사용한다.
+                        .type(.floater(verticalPadding: AppSpacing.xs, horizontalPadding: 0, useSafeAreaInset: true))
                         .position(edge == .top ? .top : .bottom)
                         .animation(style.animation)
                         .autohideIn(style.toastAutohideDuration)

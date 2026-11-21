@@ -12,6 +12,8 @@ struct NetworkImageView: View {
     private let authorizationToken: String?
     private let cachesOriginalImage: Bool
 
+    @Environment(\.displayScale) private var displayScale
+
     init(
         url: URL?,
         contentMode: SwiftUI.ContentMode = .fill,
@@ -104,7 +106,11 @@ struct NetworkImageView: View {
         }
 
         if let downsamplingSize {
-            image = image.downsampling(size: downsamplingSize)
+            // downsamplingSize는 포인트 단위다. Kingfisher는 scaleFactor(기본 1)를 곱해 픽셀 크기를 정하므로
+            // 화면 배율을 넘겨야 2x·3x 기기에서 흐려지지 않는다.
+            image = image
+                .downsampling(size: downsamplingSize)
+                .scaleFactor(displayScale)
         }
 
         return GeometryReader { geometry in
@@ -130,8 +136,15 @@ struct NetworkImageView: View {
             .padding(AppSpacing.md)
             .background(AppColor.surfaceRaised)
         } else {
-            compactImagePlaceholder
+            skeletonPlaceholder
         }
+    }
+
+    /// 이미지를 받는 동안 보이는 스켈레톤. 모서리는 바깥의 clipShape가 맞춘다.
+    private var skeletonPlaceholder: some View {
+        AppColor.gray100
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .shimmer()
     }
 
     @ViewBuilder

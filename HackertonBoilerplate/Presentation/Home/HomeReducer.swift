@@ -131,22 +131,8 @@ nonisolated struct HomeReducer: Reducer {
         return .run { send in
             do {
                 let page = try await repository.list(query: query)
-                var rows = page.routines ?? []
-                if let participantID {
-                    for index in rows.indices where rows[index].participation == .completed {
-                        try Task.checkCancellation()
-                        let source = rows[index]
-                        let result = try await repository.participationResult(id: source.id, participantID: participantID)
-                        rows[index] = RoutineSummaryEntity(
-                            id: source.id, title: result.title, content: result.content, owner: result.owner,
-                            thumbnailURL: result.cards?.first?.imageURL, cardCount: source.cardCount,
-                            likeCount: source.likeCount, participantCount: source.participantCount,
-                            createdAt: result.createdAt, participation: .completed)
-                    }
-                }
                 try Task.checkCancellation()
-                await send(.received(.init(routines: rows, size: page.size, hasNext: page.hasNext,
-                                          nextCursor: page.nextCursor, totalCount: page.totalCount), append: cursor != nil))
+                await send(.received(page, append: cursor != nil))
             } catch { await send(.failed(error.localizedDescription)) }
         }.cancelTask(id: "list")
     }

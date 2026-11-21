@@ -73,6 +73,7 @@ nonisolated struct RoutineDetailReducer: Reducer {
         var loadError: String?
         var isLive = false
         var isParticipationResult = false
+        var isParticipationOwner = false
 
         init(
             title: String,
@@ -117,6 +118,7 @@ nonisolated struct RoutineDetailReducer: Reducer {
         case cancelEditing
         case deleteComment(String)
         case deleteRoutine
+        case deleteParticipationResult
         case commentChanged(String)
         case submitCommentTapped
         case likeTapped
@@ -151,6 +153,8 @@ nonisolated struct RoutineDetailReducer: Reducer {
             state.title = detail.title
             state.introduction = detail.content
             state.isOwner = resultParticipantID == nil && (userID.map { detail.owner?.id == $0 } ?? false)
+            state.isParticipationOwner = resultParticipantID != nil && resultParticipantID == userID
+                && detail.owner?.id == userID
             state.steps = (detail.cards ?? []).enumerated().map { index, card in
                 Step(
                     id: card.id ?? "legacy-\(index)", time: card.time, title: card.title,
@@ -202,6 +206,12 @@ nonisolated struct RoutineDetailReducer: Reducer {
             return mutate(&state) {
                 try await comments.delete(routineID: id, commentID: commentID)
                 return .commentRemoved(commentID)
+            }
+        case .deleteParticipationResult:
+            guard state.isParticipationOwner, let id, let resultParticipantID, let routines else { break }
+            return mutate(&state) {
+                try await routines.deleteParticipationResult(routineID: id, participantID: resultParticipantID)
+                return .routineRemoved
             }
         case .deleteRoutine:
             guard state.isOwner, let id, let routines else { break }

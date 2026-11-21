@@ -8,6 +8,21 @@ final class RootFlowTests: XCTestCase {
     }
 
     @MainActor
+    func test_루틴_카드에서_오른쪽으로_밀어도_상세가_열리지_않는다() {
+        let app = XCUIApplication()
+        app.launchArguments = AppLaunchConfiguration.launchArguments(for: .mock(.default))
+        app.launch()
+        let card = app.buttons[AccessibilityID.Home.routine(0)]
+        XCTAssertTrue(card.waitForExistence(timeout: 10))
+        let start = card.coordinate(withNormalizedOffset: CGVector(dx: 0.15, dy: 0.5))
+        let end = card.coordinate(withNormalizedOffset: CGVector(dx: 0.95, dy: 0.5))
+        start.press(forDuration: 0.05, thenDragTo: end, withVelocity: .slow, thenHoldForDuration: 0.1)
+        let screen = RootScreen(app: app)
+        XCTAssertTrue(screen.routineCreateEntry.waitForExistence(timeout: 5))
+        XCTAssertFalse(app.otherElements[AccessibilityID.RoutineDetail.screen].exists)
+    }
+
+    @MainActor
     func test_목_모드로_실행하면_홈_화면이_보인다() {
         let app = XCUIApplication()
         app.launchArguments = AppLaunchConfiguration.launchArguments(for: .mock(.default))

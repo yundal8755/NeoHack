@@ -1,4 +1,5 @@
 import HackertonCore
+import HackertonMocks
 import MVICore
 import SwiftUI
 
@@ -6,6 +7,7 @@ struct HomeView: View {
     @ObservedObject private var store: StoreOf<HomeReducer>
     private let onRefresh: () async -> Void
     @State private var isPickingRoutineImages = false
+    @State private var isSortExpanded = false
     @State private var isProfilePresented = false
 
     init(store: StoreOf<HomeReducer>, onRefresh: @escaping () async -> Void = {}) {
@@ -63,36 +65,66 @@ struct HomeView: View {
     }
 
     private var sortPicker: some View {
-                HStack {
-                    Spacer()
-                    Menu {
-                        Picker("루틴 정렬", selection: Binding(
-                            get: { store.state.sort },
-                            set: { store.send(.sortChanged($0)) }
-                        )) {
-                            ForEach(HomeReducer.Sort.allCases, id: \.self) { sort in
-                                Text(sort.rawValue).tag(sort)
-                            }
-                        }
-                    } label: {
-                        HStack(spacing: AppSpacing.xxs) {
-                            Text(store.state.sort.rawValue)
-                                .appFont(AppFont.caption1.weight(.medium))
-                            Image("CaretLeft")
-                                .resizable()
-                                .frame(width: 18, height: 18)
-                                .rotationEffect(.degrees(-90))
-                        }
-                        .foregroundStyle(AppColor.gray600)
-                        .padding(.horizontal, 11)
-                        .padding(.vertical, AppSpacing.xxs)
-                        .background(AppColor.surface, in: Capsule())
-                        .frame(minHeight: 44)
-                    }
-                    .accessibilityIdentifier(AccessibilityID.Home.sortButton)
+        HStack {
+            Spacer()
+            Button {
+                isSortExpanded.toggle()
+            } label: {
+                HStack(spacing: AppSpacing.xs) {
+                    Text(store.state.sort.rawValue)
+                        .appFont(AppFont.caption1.weight(.medium))
+                    Image("CaretLeft")
+                        .resizable()
+                        .frame(width: 18, height: 18)
+                        .rotationEffect(.degrees(isSortExpanded ? 90 : -90))
                 }
-                .padding(.horizontal, AppSpacing.md)
-
+                .foregroundStyle(AppColor.gray500)
+                .padding(.horizontal, 11)
+                .padding(.vertical, AppSpacing.xxs)
+                .background(AppColor.background)
+                .overlay {
+                    RoundedRectangle(cornerRadius: 3).strokeBorder(AppColor.gray200)
+                }
+                .frame(minHeight: 44)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("정렬: \(store.state.sort.rawValue)")
+            .accessibilityValue(isSortExpanded ? "펼쳐짐" : "접힘")
+            .accessibilityIdentifier(AccessibilityID.Home.sortButton)
+        }
+        .padding(.horizontal, AppSpacing.md)
+        .overlay(alignment: .topTrailing) {
+            if isSortExpanded {
+                VStack(spacing: AppSpacing.xxxs) {
+                    ForEach(HomeReducer.Sort.allCases, id: \.self) { sort in
+                        Button {
+                            store.send(.sortChanged(sort))
+                            isSortExpanded = false
+                        } label: {
+                            Text(sort.rawValue)
+                                .appFont(AppFont.caption1)
+                                .foregroundStyle(AppColor.textPrimary)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .padding(.horizontal, AppSpacing.buttonPadding)
+                                .padding(.vertical, AppSpacing.xxs)
+                                .background(store.state.sort == sort ? AppColor.surface : AppColor.background)
+                                .clipShape(RoundedRectangle(cornerRadius: 5))
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityAddTraits(store.state.sort == sort ? .isSelected : [])
+                    }
+                }
+                .padding(AppSpacing.xxs)
+                .frame(width: 86)
+                .background(AppColor.background)
+                .clipShape(RoundedRectangle(cornerRadius: 3))
+                .shadow(color: AppColor.black.opacity(0.08), radius: 4, y: 2)
+                .padding(.trailing, AppSpacing.md)
+                .offset(y: 40)
+            }
+        }
+        .zIndex(1)
     }
 
     private var routineList: some View {
@@ -118,57 +150,104 @@ struct HomeView: View {
     }
 
     private func routineRow(_ routine: HomeReducer.Routine) -> some View {
-        VStack(alignment: .leading, spacing: 0) {
-            HStack(alignment: .top, spacing: AppSpacing.sm) {
-                VStack(alignment: .leading, spacing: 0) {
-                    HStack(spacing: AppSpacing.xs) {
-                        Image("RoutineDetailAvatar")
-                            .resizable()
-                            .frame(width: 35, height: 35)
-                            .accessibilityHidden(true)
-                        Text(routine.nickname)
-                            .appFont(AppFont.body2)
-                            .foregroundStyle(AppColor.grayBlack)
-                    }
-                    .padding(.vertical, AppSpacing.xxs)
-
-                    Text(routine.detail.title)
-                        .appFont(AppFont.body1)
-                        .foregroundStyle(AppColor.textPrimary)
-                        .lineLimit(2)
-                        .padding(.vertical, AppSpacing.xxxs)
-                    Text(routine.introduction)
-                        .appFont(AppFont.caption1)
-                        .foregroundStyle(AppColor.gray600)
-                        .lineLimit(2)
-                        .padding(.vertical, AppSpacing.xxxs)
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-
-                Group {
-                    if let url = routine.detail.steps.first?.imageURL {
-                        NetworkImageView(
-                            url: url,
-                            cornerRadius: AppRadius.button,
-                            downsamplingSize: CGSize(width: 115, height: 115),
-                            accessibilityLabel: "루틴 대표 이미지",
-                            borderColor: nil,
-                            showsLoadingText: false
-                        )
-                    } else {
-                        RoundedRectangle(cornerRadius: AppRadius.button).fill(AppColor.gray400)
+        HStack(alignment: .top, spacing: AppSpacing.sm) {
+            VStack(alignment: .leading, spacing: 0) {
+                HStack(alignment: .firstTextBaseline, spacing: AppSpacing.xs) {
+                    Image("RoutineDetailAvatar")
+                        .resizable()
+                        .frame(width: 35, height: 35)
+                        .accessibilityHidden(true)
+                    ViewThatFits(in: .horizontal) {
+                        HStack(alignment: .firstTextBaseline, spacing: AppSpacing.xs) {
+                            authorName(routine.nickname)
+                            createdDate(routine.createdAt)
+                        }
+                        VStack(alignment: .leading, spacing: 0) {
+                            authorName(routine.nickname)
+                            createdDate(routine.createdAt)
+                        }
                     }
                 }
-                .frame(width: 115, height: 115)
+                .padding(.vertical, AppSpacing.xxs)
+
+                Text(routine.detail.title)
+                    .appFont(AppFont.body1)
+                    .foregroundStyle(AppColor.textPrimary)
+                    .lineLimit(1)
+                    .padding(.vertical, AppSpacing.xxxs)
+                Text(routine.introduction)
+                    .appFont(AppFont.caption1)
+                    .foregroundStyle(AppColor.gray600)
+                    .lineLimit(2)
+                    .padding(.vertical, AppSpacing.xxxs)
+
+                ViewThatFits(in: .horizontal) {
+                    HStack(spacing: AppSpacing.buttonPadding) {
+                        routineCounts(routine)
+                        participationBadge(routine.detail.participation)
+                    }
+                    VStack(alignment: .leading, spacing: AppSpacing.xxs) {
+                        routineCounts(routine)
+                        participationBadge(routine.detail.participation)
+                    }
+                }
+                .padding(.vertical, AppSpacing.xxs)
             }
-            HStack(spacing: AppSpacing.buttonPadding) {
-                count("Heart", value: routine.detail.likeCount)
-                count("ChatCircle", value: routine.detail.commentCount)
+            .frame(maxWidth: .infinity, alignment: .leading)
+
+            Group {
+                if let url = routine.detail.steps.first?.imageURL {
+                    NetworkImageView(
+                        url: url, cornerRadius: AppRadius.button,
+                        downsamplingSize: CGSize(width: 115, height: 115),
+                        accessibilityLabel: "루틴 대표 이미지", borderColor: nil, showsLoadingText: false
+                    )
+                } else {
+                    RoundedRectangle(cornerRadius: AppRadius.button).fill(AppColor.gray400)
+                }
             }
-            .padding(.vertical, AppSpacing.xxs)
+            .frame(width: 115, height: 115)
         }
         .padding(.vertical, AppSpacing.md)
         .contentShape(Rectangle())
+    }
+
+    private func authorName(_ name: String) -> some View {
+        Text(name).appFont(AppFont.body2).foregroundStyle(AppColor.grayBlack)
+    }
+
+    private func createdDate(_ date: Date) -> some View {
+        Text(Self.dateFormatter.string(from: date))
+            .appFont(AppFont.caption2)
+            .foregroundStyle(AppColor.gray500)
+    }
+
+    private static let dateFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.timeZone = TimeZone(identifier: "Asia/Seoul")
+        formatter.dateFormat = "yyyy. MM. dd HH:mm"
+        return formatter
+    }()
+
+    private func routineCounts(_ routine: HomeReducer.Routine) -> some View {
+        HStack(spacing: AppSpacing.buttonPadding) {
+            count(routine.detail.isLiked ? "HomeHeartFilled" : "Heart", value: routine.detail.likeCount)
+            count("ChatCircle", value: routine.detail.commentCount)
+        }
+    }
+
+    @ViewBuilder
+    private func participationBadge(_ participation: RoutineDetailReducer.Participation) -> some View {
+        if participation != .notJoined {
+            Text(participation.rawValue)
+                .appFont(AppFont.caption1.weight(.medium))
+                .foregroundStyle(participation == .joined ? Color(hexCode: "#3C771B") : AppColor.gray500)
+                .padding(.horizontal, AppSpacing.buttonPadding)
+                .padding(.vertical, AppSpacing.xxxs)
+                .background(participation == .joined ? Color(hexCode: "#D3FBBB") : AppColor.surface, in: Capsule())
+                .fixedSize()
+        }
     }
 
     private func count(_ asset: String, value: Int) -> some View {
@@ -190,29 +269,6 @@ private struct HomeRoutineDetailDestination: View {
     var body: some View { RoutineDetailView(store: store) }
 }
 
-enum HomePreview {
-    static var state: HomeReducer.State {
-        let titles: [String] = ["김햄찌의 하루", "느긋한 주말 아침", "퇴근 후 작은 산책", "오늘은 집밥", "책과 함께하는 밤", "출근길 새로운 발견", "방 정리하는 오후", "친구와 동네 한 바퀴", "하루 한 곡 집중하기", "나만의 카페 시간", "잠들기 전 스트레칭", "일요일 저녁 기록"]
-        let names: [String] = ["김햄찌", "느림보", "산책러", "집밥요정", "책갈피", "발견왕"]
-        let routines: [HomeReducer.Routine] = titles.indices.map { index -> HomeReducer.Routine in
-            var detail = RoutineDetailPreview.state
-            detail.title = titles[index]
-            detail.likeCount = 10 + (index * 7) % 31
-            detail.commentCount = 2 + index
-            detail.participatingCount = index % 5
-            detail.completedCount = index * 2
-            return HomeReducer.Routine(
-                id: index,
-                nickname: names[index % names.count],
-                introduction: index == 0 ? "제 찐 일상인데요... 딱히 재밌는 건 없네요" : "익숙한 하루를 조금 다르게 보내는 나만의 루틴이에요.",
-                createdAt: Date(timeIntervalSince1970: Double(12 - index)),
-                detail: detail
-            )
-        }
-        return HomeReducer.State(routines: routines)
-    }
-}
-
 #Preview("홈") {
-    HomeView(store: StoreOf<HomeReducer>(state: HomePreview.state, reducer: HomeReducer()))
+    HomeView(store: StoreOf<HomeReducer>(state: MockRoutineData.home, reducer: HomeReducer()))
 }

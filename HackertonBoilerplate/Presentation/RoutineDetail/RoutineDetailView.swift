@@ -1,4 +1,5 @@
 import HackertonCore
+import HackertonMocks
 import MVICore
 import SwiftUI
 
@@ -316,31 +317,9 @@ struct RoutineDetailView: View {
 
 }
 
-/// Figma 예시 데이터는 Preview·스냅샷에만 사용한다.
-enum RoutineDetailPreview {
-    static var state: RoutineDetailReducer.State {
-        .init(
-            title: "김햄찌의 하루",
-            steps: (1...2).map {
-                .init(
-                    id: $0,
-                    time: "10:30",
-                    title: "아침에 지하철 타러가요",
-                    content: "아침에 역시나 사람이 많아요. 지하철 사람들이 모두 회색 인간인 것 같아요. 출근할 때 항상 타는 것인데, 먼가 우울하게 시작하는 것 같아요."
-                )
-            },
-            comments: (1...2).map { .init(id: $0, nickname: "닉네임", dateText: "날짜 및 시간", content: "댓글") },
-            likeCount: 10,
-            commentCount: 9,
-            participatingCount: 3,
-            completedCount: 10
-        )
-    }
-}
-
 #Preview("루틴 상세") {
     RoutineDetailView(store: StoreOf<RoutineDetailReducer>(
-        state: RoutineDetailPreview.state,
+        state: MockRoutineData.detail,
         reducer: RoutineDetailReducer()
     ))
 }

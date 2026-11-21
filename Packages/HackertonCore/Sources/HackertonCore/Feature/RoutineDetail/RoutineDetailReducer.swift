@@ -40,6 +40,7 @@ public struct RoutineDetailReducer: Reducer {
         public var title: String
         public var steps: [Step]
         public var comments: [Comment]
+        public var isLiked = false
         public var likeCount: Int
         public var commentCount: Int
         public var participatingCount: Int

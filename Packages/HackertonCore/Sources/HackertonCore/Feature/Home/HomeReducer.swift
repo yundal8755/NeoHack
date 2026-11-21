@@ -23,7 +23,8 @@ public struct HomeReducer: Reducer {
 
     public enum Sort: String, CaseIterable {
         case latest = "최신순"
-        case likes = "좋아요순"
+        case likes = "인기순"
+        case participation = "참여순"
     }
 
     public struct State: Equatable {
@@ -39,6 +40,11 @@ public struct HomeReducer: Reducer {
             routines.sorted { lhs, rhs in
                 if sort == .likes, lhs.detail.likeCount != rhs.detail.likeCount {
                     return lhs.detail.likeCount > rhs.detail.likeCount
+                }
+                if sort == .participation {
+                    let leftCount = lhs.detail.participatingCount + lhs.detail.completedCount
+                    let rightCount = rhs.detail.participatingCount + rhs.detail.completedCount
+                    if leftCount != rightCount { return leftCount > rightCount }
                 }
                 if lhs.createdAt != rhs.createdAt { return lhs.createdAt > rhs.createdAt }
                 return lhs.id < rhs.id

@@ -1,4 +1,5 @@
 import HackertonCore
+import HackertonMocks
 import MVICore
 import SnapshotTesting
 import SwiftUI
@@ -12,7 +13,7 @@ struct RoutineDetailViewSnapshotTests {
     func routineDetailView(stateName: String) {
         var state = stateName == "empty"
             ? RoutineDetailReducer.State(title: "루틴 상세")
-            : RoutineDetailPreview.state
+            : MockRoutineData.detail
         if stateName == "draft" { state.commentDraft = "이 루틴을 함께 해보고 싶어요." }
         let view = RoutineDetailView(store: StoreOf<RoutineDetailReducer>(
             state: state,

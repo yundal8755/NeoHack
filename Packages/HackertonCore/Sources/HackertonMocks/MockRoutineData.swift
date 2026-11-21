@@ -33,6 +33,23 @@ public enum MockRoutineData {
         return HomeReducer.State(routines: routines)
     }
 
+    public static var profile: MyProfileReducer.State {
+        let rows = home.routines
+        let mine = rows.prefix(3).map { routine -> HomeReducer.Routine in
+            var detail = routine.detail
+            detail.isOwner = true
+            detail.participation = .notJoined
+            return HomeReducer.Routine(id: routine.id, nickname: "김햄찌", introduction: routine.introduction, createdAt: routine.createdAt, detail: detail)
+        }
+        let joined = rows.dropFirst(3).prefix(5).map { routine -> HomeReducer.Routine in
+            var detail = routine.detail
+            detail.isOwner = false
+            if detail.participation == .notJoined { detail.participation = .joined }
+            return HomeReducer.Routine(id: routine.id, nickname: routine.nickname, introduction: routine.introduction, createdAt: routine.createdAt, detail: detail)
+        }
+        return MyProfileReducer.State(nickname: "김햄찌", introduction: "김햄찌 너무 귀여워요. 최고최고", myRoutines: mine, participatingRoutines: joined)
+    }
+
     public static var emptyHome: HomeReducer.State { .init() }
 
     public static var detail: RoutineDetailReducer.State {

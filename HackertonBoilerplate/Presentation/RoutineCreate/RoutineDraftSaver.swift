@@ -18,7 +18,10 @@ final class RoutineDraftSaver {
 
     func saveParticipation(_ draft: RoutineDraft, routineID: String, expectedSteps: Int) async throws -> RoutineInteractions {
         guard draft.steps.count == expectedSteps, !draft.steps.isEmpty,
-              draft.steps.allSatisfy({ !$0.image.data.isEmpty }) else {
+              draft.steps.allSatisfy({ step in
+                  if case let .local(image) = step.photo { return !image.data.isEmpty }
+                  return false
+              }) else {
             throw DataContractError.invalidValue("participation.cards")
         }
         let input = try await input(draft)
@@ -29,7 +32,7 @@ final class RoutineDraftSaver {
         var cards: [RoutineParticipationDraft.Card?] = []
         for step in state.steps {
             try Task.checkCancellation()
-            let id = step.requiresImageUpload ? nil : try await uploadedID(for: step.image)
+            let id = step.requiresImageUpload ? nil : try await uploadedID(for: step.photo)
             cards.append(.init(imageID: id, title: step.title, content: step.content, time: step.time.formatted))
         }
         try Task.checkCancellation()
@@ -58,8 +61,7 @@ final class RoutineDraftSaver {
                 let data = try await images.data(id: id)
                 guard !data.isEmpty else { throw DataContractError.invalidValue("draft.image") }
                 let image = RoutineImage(data: data)
-                restored[index].image = image
-                restored[index].requiresImageUpload = false
+                restored[index].photo = .local(image)
                 uploadedIDs[image.id] = id
             }
         }
@@ -67,19 +69,39 @@ final class RoutineDraftSaver {
         return .init(steps: restored, routineTitle: draft.title ?? "", routineIntroduction: draft.content ?? "")
     }
 
-    private func uploadedID(for image: RoutineImage) async throws -> String {
-        if let id = uploadedIDs[image.id] { return id }
-        guard !image.data.isEmpty else { throw DataContractError.invalidValue("image") }
-        let result = try await images.upload(input: .init(data: image.data, fileName: "card.jpg", mimeType: "image/jpeg"))
-        uploadedIDs[image.id] = result.id
-        return result.id
+    private func uploadedID(for photo: RoutineDraft.Step.Photo) async throws -> String {
+        switch photo {
+        case let .stored(id, _): return id
+        case let .local(image):
+            if let id = uploadedIDs[image.id] { return id }
+            guard !image.data.isEmpty else { throw DataContractError.invalidValue("image") }
+            let result = try await images.uploadStep(input: .init(data: image.data, fileName: "card.jpg", mimeType: "image/jpeg"))
+            uploadedIDs[image.id] = result.id
+            return result.id
+        case .reference: throw DataContractError.invalidValue("card.imageId")
+        }
+    }
+
+    enum EditTarget {
+        case routine(id: String)
+        case participation(routineID: String, participantID: String)
+    }
+
+    func update(_ draft: RoutineDraft, target: EditTarget) async throws {
+        let input = try await input(draft)
+        switch target {
+        case let .routine(id):
+            _ = try await routines.update(id: id, input: input)
+        case let .participation(routineID, participantID):
+            _ = try await routines.updateParticipationResult(routineID: routineID, participantID: participantID, input: input)
+        }
     }
 
     private func input(_ draft: RoutineDraft) async throws -> RoutineSaveInput {
         var cards: [RoutineCardEntity] = []
         for step in draft.steps {
             try Task.checkCancellation()
-            let id = try await uploadedID(for: step.image)
+            let id = try await uploadedID(for: step.photo)
             cards.append(.init(imageID: id, title: step.title, content: step.content, time: step.time.formatted))
         }
         try Task.checkCancellation()

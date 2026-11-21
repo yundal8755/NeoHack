@@ -114,6 +114,23 @@ struct ComponentSnapshotTests {
         assertSnapshot(of: view.snapshotContainer(), as: .component)
     }
 
+    /// loading: 응답이 오기 전 첫 프레임의 스켈레톤(쉬머 하이라이트는 시작 위치라 화면 밖에 있다).
+    /// failure: URL이 없을 때의 대체 이미지.
+    @Test(arguments: ["loading", "failure"])
+    func networkImageView(state: String) {
+        let url = state == "loading" ? URL(string: "https://example.invalid/loading.jpg") : nil
+        let view = NetworkImageView(
+            url: url,
+            cornerRadius: AppRadius.button,
+            downsamplingSize: CGSize(width: 115, height: 115),
+            borderColor: nil,
+            showsLoadingText: false
+        )
+        .frame(width: 115, height: 115)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        assertSnapshot(of: view.snapshotContainer(), as: .component, named: state)
+    }
+
     @Test func timePickerSheet() {
         let view = TimePickerSheet(time: TimeOfDay(hour: 22, minute: 33), onCancel: {}, onConfirm: { _ in })
             .frame(height: TimePickerSheet.sheetHeight, alignment: .top)

@@ -29,7 +29,7 @@ struct ProfileEditViewSnapshotTests {
         ("saveFailed", editing(nickname: "부지런한햄찌") { $0.editError = "이미 사용 중인 닉네임이에요." }),
     ]
 
-    @Test(arguments: states.map(\.0))
+    @Test(arguments: ["unchanged", "edited", "invalidNickname", "saving", "saveFailed"])
     func profileEditView(name: String) throws {
         let state = try #require(Self.states.first { $0.0 == name }?.1)
         let store = StoreOf<Feature>(state: state, reducer: Feature())

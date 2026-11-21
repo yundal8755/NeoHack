@@ -25,12 +25,10 @@ public struct RoutineCreateReducer: Reducer {
 
     public struct Step: Equatable, Identifiable, Sendable {
         public let id: UUID
-        public var image: RoutineImage
+        public var photo: RoutineDraft.Step.Photo
         public var time: TimeOfDay
         public var title: String
         public var content: String
-        public var referenceImageURL: URL? = nil
-        public var requiresImageUpload = false
 
         public init(
             id: UUID = UUID(),
@@ -39,21 +37,32 @@ public struct RoutineCreateReducer: Reducer {
             title: String = "",
             content: String = ""
         ) {
+            self.init(id: id, photo: .local(image), time: time, title: title, content: content)
+        }
+
+        public init(
+            id: UUID = UUID(), photo: RoutineDraft.Step.Photo, time: TimeOfDay, title: String = "", content: String = ""
+        ) {
             self.id = id
-            self.image = image
+            self.photo = photo
             self.time = time
             self.title = title
             self.content = content
         }
 
-        /// 필수 항목(이미지·시간·제목)이 모두 올바른지. 이미지와 시간은 항상 들어 있다.
+        public var requiresImageUpload: Bool {
+            if case .reference = photo { return true }
+            return false
+        }
+
+        /// 필수 항목(이미지·시간·제목)이 모두 올바른지 확인한다.
         public var isValid: Bool {
             !requiresImageUpload && RoutineCreateReducer.stepTitleLength.contains(title.trimmingCharacters(in: .whitespacesAndNewlines).count)
                 && content.count <= RoutineCreateReducer.stepContentMaxLength
         }
 
         var hasInput: Bool {
-            !title.isEmpty || !content.isEmpty || (referenceImageURL != nil && !requiresImageUpload)
+            !title.isEmpty || !content.isEmpty
         }
     }
 
@@ -74,6 +83,7 @@ public struct RoutineCreateReducer: Reducer {
         public var page: Page
         public var routineTitle: String
         public var routineIntroduction: String
+        public let introductionLimit: Int
         public var isTimePickerPresented: Bool
         public var isExitAlertPresented: Bool
         /// 화면을 닫아야 할 때 값이 생긴다.
@@ -86,12 +96,14 @@ public struct RoutineCreateReducer: Reducer {
             routineIntroduction: String = "",
             isTimePickerPresented: Bool = false,
             isExitAlertPresented: Bool = false,
-            outcome: Outcome? = nil
+            outcome: Outcome? = nil,
+            introductionLimit: Int = RoutineCreateReducer.routineIntroductionMaxLength
         ) {
             self.steps = steps
             self.page = page ?? (steps.isEmpty ? .introduction : .step(0))
             self.routineTitle = routineTitle
             self.routineIntroduction = routineIntroduction
+            self.introductionLimit = introductionLimit
             self.isTimePickerPresented = isTimePickerPresented
             self.isExitAlertPresented = isExitAlertPresented
             self.outcome = outcome
@@ -121,7 +133,7 @@ public struct RoutineCreateReducer: Reducer {
 
         public var isCompleteEnabled: Bool {
             RoutineCreateReducer.routineTitleLength.contains(routineTitle.trimmingCharacters(in: .whitespacesAndNewlines).count)
-                && routineIntroduction.count <= RoutineCreateReducer.routineIntroductionMaxLength
+                && routineIntroduction.count <= introductionLimit
                 && steps.allSatisfy(\.isValid)
         }
 
@@ -133,6 +145,7 @@ public struct RoutineCreateReducer: Reducer {
 
     public enum Action: Equatable {
         case stepImageReplaced(RoutineImage)
+        case stepPhotoLoaded(id: UUID, image: RoutineImage, time: TimeOfDay?)
         case timeTapped
         case timeSelected(TimeOfDay)
         case timePickerDismissed
@@ -154,10 +167,12 @@ public struct RoutineCreateReducer: Reducer {
     public func reduce(_ state: inout State, with action: Action) -> Effect<Action> {
         switch action {
         case let .stepImageReplaced(image):
-            updateCurrentStep(&state) {
-                $0.image = image
-                $0.requiresImageUpload = false
-            }
+            updateCurrentStep(&state) { $0.photo = .local(image) }
+
+        case let .stepPhotoLoaded(id, image, time):
+            guard let index = state.steps.firstIndex(where: { $0.id == id }) else { break }
+            state.steps[index].photo = .local(image)
+            if let time { state.steps[index].time = time }
 
         case .timeTapped:
             if state.currentStep != nil {
@@ -181,7 +196,7 @@ public struct RoutineCreateReducer: Reducer {
             state.routineTitle = String(title.prefix(Self.routineTitleLength.upperBound))
 
         case let .routineIntroductionChanged(introduction):
-            state.routineIntroduction = String(introduction.prefix(Self.routineIntroductionMaxLength))
+            state.routineIntroduction = String(introduction.prefix(state.introductionLimit))
 
         case .previousTapped:
             guard state.isPreviousVisible else { break }
@@ -239,7 +254,7 @@ public struct RoutineCreateReducer: Reducer {
             introduction: state.routineIntroduction.nilIfBlank,
             steps: state.steps.map { step in
                 RoutineDraft.Step(
-                    image: step.image,
+                    photo: step.photo,
                     time: step.time,
                     title: step.title,
                     content: step.content.nilIfBlank

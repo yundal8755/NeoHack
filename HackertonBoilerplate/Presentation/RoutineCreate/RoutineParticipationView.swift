@@ -32,12 +32,9 @@ struct RoutineParticipationView: View {
         _hasJoined = State(initialValue: participation == .joined)
         let forms = steps.map { reference in
             let parts = reference.time.split(separator: ":").compactMap { Int($0) }
-            var step = RoutineCreateReducer.Step(
-                image: RoutineImage(data: Data()),
+            return RoutineCreateReducer.Step(
+                photo: .reference(reference.imageURL),
                 time: TimeOfDay(hour: parts.first ?? 0, minute: parts.dropFirst().first ?? 0))
-            step.referenceImageURL = reference.imageURL
-            step.requiresImageUpload = true
-            return step
         }
         _store = StateObject(wrappedValue: StoreOf<RoutineCreateReducer>(
             state: .init(steps: forms), reducer: RoutineCreateReducer()))

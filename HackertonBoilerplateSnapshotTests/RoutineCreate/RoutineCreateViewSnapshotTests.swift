@@ -38,7 +38,7 @@ struct RoutineCreateViewSnapshotTests {
         ),
     ]
 
-    @Test(arguments: states.map(\.0))
+    @Test(arguments: ["firstStepEmpty", "secondStepFilled", "introductionEmpty", "introductionFilled"])
     func routineCreateView(name: String) throws {
         let state = try #require(Self.states.first { $0.0 == name }?.1)
         let store = StoreOf<Feature>(state: state, reducer: Feature())

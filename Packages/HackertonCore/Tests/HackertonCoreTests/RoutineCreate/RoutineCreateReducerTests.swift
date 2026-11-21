@@ -61,7 +61,22 @@ struct RoutineCreateReducerTests {
 
         #expect(state.steps[0].title.isEmpty)
         #expect(state.steps[1].title == "두번째 스텝")
-        #expect(state.steps[1].image == image)
+        #expect(state.steps[1].photo == .local(image))
+    }
+
+    @Test func 사진을_읽는_동안_스텝이_바뀌어도_원래_스텝에_반영된다() {
+        var state = Feature.State(steps: .fixture(count: 2), page: .step(1))
+        let firstID = state.steps[0].id
+        let secondPhoto = state.steps[1].photo
+        let photo = RoutineImage(data: Data([42]))
+        let time = TimeOfDay(hour: 8, minute: 30)
+
+        _ = reducer.reduce(&state, with: .stepPhotoLoaded(id: firstID, image: photo, time: time))
+
+        #expect(state.steps[0].photo == .local(photo))
+        #expect(state.steps[0].time == time)
+        #expect(state.steps[1].photo == secondPhoto)
+        #expect(state.page == .step(1))
     }
 
     // MARK: - 시간 선택
@@ -157,7 +172,7 @@ struct RoutineCreateReducerTests {
                     title: "김햄찌의 하루",
                     introduction: nil,
                     steps: steps.map {
-                        RoutineDraft.Step(image: $0.image, time: $0.time, title: "다섯글자임", content: nil)
+                        RoutineDraft.Step(photo: $0.photo, time: $0.time, title: "다섯글자임", content: nil)
                     }
                 )
             )

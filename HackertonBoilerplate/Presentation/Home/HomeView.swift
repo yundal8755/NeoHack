@@ -9,6 +9,7 @@ struct HomeView: View {
     @State private var navigationPath: [DetailRoute] = []
     @State private var participationCompletedID: UUID?
     @State private var deletedRoutineID: String?
+    @State private var routineUpdatedID: UUID?
     @State private var isHomeDragging = false
     @State private var isSortExpanded = false
     @State private var isProfilePresented = false
@@ -22,7 +23,10 @@ struct HomeView: View {
         NavigationStack(path: $navigationPath) {
             VStack(spacing: 0) {
                 AppTopBar(
-                    "서비스명",
+                    AppBrand.serviceName,
+                    leading: .asset("Plus", label: "루틴 만들기", accessibilityID: AccessibilityID.Home.createButton) {
+                        isPickingRoutineImages = true
+                    },
                     trailing: .asset("User", label: "마이프로필") {
                         isProfilePresented = true
                     })
@@ -32,18 +36,6 @@ struct HomeView: View {
                 routineList
             }
             .background(AppColor.background)
-            .overlay(alignment: .bottomTrailing) {
-                Button {
-                    isPickingRoutineImages = true
-                } label: {
-                    Image("HomeCreateButton")
-                        .frame(width: 55, height: 55)
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel("루틴 만들기")
-                .accessibilityIdentifier(AccessibilityID.Home.createButton)
-                .padding(AppSpacing.md)
-            }
             .routineCreateSwipe(
                 profile: profileView, isProfilePresented: $isProfilePresented, isDragging: $isHomeDragging
             ) {
@@ -57,6 +49,9 @@ struct HomeView: View {
                         closeDetail()
                         participationCompletedID = UUID()
                         isProfilePresented = true
+                    }, onUpdated: {
+                        store.send(.refresh)
+                        routineUpdatedID = UUID()
                     }, onBack: closeDetail) {
                         if route.participantID != nil {
                             participationCompletedID = UUID()
@@ -88,7 +83,8 @@ struct HomeView: View {
     private var profileView: some View {
         if let session {
             MyProfileView(
-                session: session, deletedRoutineID: deletedRoutineID, participationCompletedID: participationCompletedID, onRoutineSelected: showRoutine,
+                session: session, deletedRoutineID: deletedRoutineID, participationCompletedID: participationCompletedID,
+                routineUpdatedID: routineUpdatedID, onRoutineSelected: showRoutine,
                 onBack: closeProfile)
         } else {
             #if DEBUG
@@ -205,7 +201,7 @@ struct HomeView: View {
                 }
             }
             .padding(.horizontal, AppSpacing.md)
-            .padding(.bottom, 88)
+            .padding(.bottom, AppSpacing.lg)
         }
         .refreshable {
             store.send(.refresh)

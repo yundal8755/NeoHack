@@ -7,6 +7,7 @@ struct MyProfileView: View {
     @StateObject private var store: StoreOf<MyProfileReducer>
     @StateObject private var participating: StoreOf<HomeReducer>
     private let participationCompletedID: UUID?
+    private let routineUpdatedID: UUID?
     @StateObject private var mine: StoreOf<HomeReducer>
     private let session: ProfileSession?
     private let onBack: () -> Void
@@ -24,12 +25,14 @@ struct MyProfileView: View {
         self.onRoutineSelected = onRoutineSelected
         deletedRoutineID = nil
         participationCompletedID = nil
+        routineUpdatedID = nil
         _participating = StateObject(wrappedValue: StoreOf<HomeReducer>(state: .init(), reducer: HomeReducer()))
         session = nil
     }
 
     init(
         session: ProfileSession, deletedRoutineID: String?, participationCompletedID: UUID? = nil,
+        routineUpdatedID: UUID? = nil,
         onRoutineSelected: @escaping (HomeReducer.Routine) -> Void, onBack: @escaping () -> Void
     ) {
         _store = StateObject(
@@ -43,6 +46,7 @@ struct MyProfileView: View {
         _participating = StateObject(wrappedValue: StoreOf<HomeReducer>(
             state: .init(), reducer: HomeReducer(repository: session.repositories.routines, participantID: session.profile.id)))
         self.participationCompletedID = participationCompletedID
+        self.routineUpdatedID = routineUpdatedID
         self.session = session
         self.deletedRoutineID = deletedRoutineID
         self.onRoutineSelected = onRoutineSelected
@@ -121,6 +125,10 @@ struct MyProfileView: View {
             } else {
                 participating.send(.appeared)
             }
+        }
+        .onChange(of: routineUpdatedID) { _, _ in
+            mine.send(.refresh)
+            participating.send(.refresh)
         }
         .onChange(of: deletedRoutineID) { _, id in
             if let id { mine.send(.removed(id)) }

@@ -17,7 +17,7 @@ struct RoutineDetailView: View {
     @State private var isEditPresented = false
     @State private var selectedProfile: ProfileRoute?
 
-    private struct ProfileRoute: Identifiable {
+    private struct ProfileRoute: Identifiable, Hashable {
         let id: String
     }
     private let onParticipationCompleted: () -> Void
@@ -230,11 +230,8 @@ struct RoutineDetailView: View {
                     onCancel: { isEditPresented = false })
             }
         }
-        .navigationDestination(isPresented: Binding(
-            get: { selectedProfile != nil },
-            set: { if !$0 { selectedProfile = nil } }
-        )) {
-            if let session, let profile = selectedProfile {
+        .navigationDestination(item: $selectedProfile) { profile in
+            if let session {
                 PublicProfileView(publicID: profile.id, users: session.repositories.users, session: session, onBack: {
                     selectedProfile = nil
                     store.send(.load)

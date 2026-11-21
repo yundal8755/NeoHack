@@ -19,6 +19,7 @@ public enum AccessibilityID {
         public static let previousButton = "routineCreate.previousButton"
         public static let nextButton = "routineCreate.nextButton"
         public static let completeButton = "routineCreate.completeButton"
+        public static let dismissKeyboardButton = "routineCreate.dismissKeyboardButton"
     }
 
     public enum TopBar {

@@ -12,6 +12,14 @@ struct RoutineCreateView: View {
     private let onFinish: (Feature.Outcome) -> Void
 
     @State private var replacingImageItem: PhotosPickerItem?
+    @FocusState private var focusedField: Field?
+
+    private enum Field: Hashable {
+        case stepTitle
+        case stepContent
+        case routineTitle
+        case routineIntroduction
+    }
 
     init(store: StoreOf<Feature>, onFinish: @escaping (Feature.Outcome) -> Void = { _ in }) {
         _store = StateObject(wrappedValue: store)
@@ -21,28 +29,55 @@ struct RoutineCreateView: View {
     private var state: Feature.State { store.state }
 
     var body: some View {
-        VStack(spacing: 0) {
-            AppTopBar("루틴 만들기", trailing: .exit { store.send(.exitTapped) })
+        // 스크롤 영역만 키보드를 피하고, 하단 버튼은 키보드를 따라 올라오지 않도록 키보드 영역을 무시한다.
+        ZStack(alignment: .bottom) {
+            VStack(spacing: 0) {
+                AppTopBar("루틴 만들기", trailing: .exit { store.send(.exitTapped) })
 
-            ScrollView {
-                VStack(spacing: 0) {
-                    StepIndicator(count: state.steps.count, current: state.indicatorStep)
+                ScrollView {
+                    VStack(spacing: 0) {
+                        StepIndicator(count: state.steps.count, current: state.indicatorStep)
 
-                    if let step = state.currentStep {
-                        stepForm(step)
-                            .id(step.id)
-                    } else {
-                        introductionForm
+                        if let step = state.currentStep {
+                            stepForm(step)
+                                .id(step.id)
+                        } else {
+                            introductionForm
+                        }
+                    }
+                    .padding(.horizontal, AppSpacing.md)
+                    .background {
+                        // 입력창 밖 빈 곳을 누르면 키보드를 내린다.
+                        Color.clear
+                            .contentShape(Rectangle())
+                            .onTapGesture { focusedField = nil }
                     }
                 }
-                .padding(.horizontal, AppSpacing.md)
+                .scrollDismissesKeyboard(.interactively)
+                // 키보드가 없을 때 마지막 입력창이 하단 버튼에 가리지 않도록 버튼 높이만큼 비워 둔다.
+                .safeAreaPadding(.bottom, Self.bottomBarHeight)
             }
-            .scrollDismissesKeyboard(.interactively)
-            .safeAreaInset(edge: .bottom, spacing: 0) {
-                bottomButtons
-            }
+
+            bottomButtons
+                .frame(maxHeight: .infinity, alignment: .bottom)
+                .ignoresSafeArea(.keyboard, edges: .bottom)
         }
         .background(AppColor.background)
+        .toolbar {
+            ToolbarItemGroup(placement: .keyboard) {
+                Spacer()
+                Button {
+                    focusedField = nil
+                } label: {
+                    Image(systemName: "keyboard.chevron.compact.down")
+                }
+                .accessibilityLabel(Text(verbatim: "키보드 내리기"))
+                .accessibilityIdentifier(AccessibilityID.RoutineCreate.dismissKeyboardButton)
+            }
+        }
+        .onChange(of: state.page) { _, _ in
+            focusedField = nil
+        }
         .toolbar(.hidden, for: .navigationBar)
         .accessibilityIdentifier(AccessibilityID.RoutineCreate.screen)
         .alert(
@@ -92,7 +127,10 @@ struct RoutineCreateView: View {
 
             HStack(spacing: AppSpacing.inlineLabelGap) {
                 FieldTitle("시간", isRequired: true)
-                TimeChip(time: step.time) { store.send(.timeTapped) }
+                TimeChip(time: step.time) {
+                    focusedField = nil
+                    store.send(.timeTapped)
+                }
                     .accessibilityIdentifier(AccessibilityID.RoutineCreate.timeChip)
             }
 
@@ -102,6 +140,7 @@ struct RoutineCreateView: View {
                     text: Binding(get: { step.title }, set: { store.send(.stepTitleChanged($0)) }),
                     maxLength: Feature.stepTitleLength.upperBound
                 )
+                .focused($focusedField, equals: .stepTitle)
                 .accessibilityIdentifier(AccessibilityID.RoutineCreate.stepTitleField)
             }
 
@@ -112,6 +151,7 @@ struct RoutineCreateView: View {
                     axis: .vertical,
                     maxLength: Feature.stepContentMaxLength
                 )
+                .focused($focusedField, equals: .stepContent)
                 .accessibilityIdentifier(AccessibilityID.RoutineCreate.stepContentField)
             }
         }
@@ -128,6 +168,7 @@ struct RoutineCreateView: View {
                     text: Binding(get: { state.routineTitle }, set: { store.send(.routineTitleChanged($0)) }),
                     maxLength: Feature.routineTitleLength.upperBound
                 )
+                .focused($focusedField, equals: .routineTitle)
                 .accessibilityIdentifier(AccessibilityID.RoutineCreate.routineTitleField)
             }
 
@@ -141,6 +182,7 @@ struct RoutineCreateView: View {
                     axis: .vertical,
                     maxLength: Feature.routineIntroductionMaxLength
                 )
+                .focused($focusedField, equals: .routineIntroduction)
                 .accessibilityIdentifier(AccessibilityID.RoutineCreate.routineIntroductionField)
             }
         }
@@ -198,6 +240,9 @@ struct RoutineCreateView: View {
 
     /// Figma 이미지 영역 높이.
     static let imageHeight: CGFloat = 340
+    /// 하단 버튼 영역 높이(위 여백 + 버튼).
+    private static let bottomBarHeight: CGFloat =
+        AppSpacing.xs + AppFont.body2.lineHeight + AppSpacing.buttonPadding * 2
 }
 
 /// 고른 이미지를 영역에 꽉 채워 보여준다. 이미지가 바뀔 때만 다시 디코딩한다.

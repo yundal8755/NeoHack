@@ -34,6 +34,11 @@ private struct RoutineCreateSwipe: ViewModifier {
     private static let flickRatio: CGFloat = 0.6
 
     private var offset: CGFloat { settledOffset + drag.offset }
+    /// 밀기 시작하면 모서리를 둥글게 키우고, 이 거리만큼 밀면 최대가 된다.
+    private static let cornerRoundingDistance: CGFloat = 48
+    private var cornerRadius: CGFloat {
+        AppRadius.slidingScreen * min(max(offset, 0) / Self.cornerRoundingDistance, 1)
+    }
     private var commitDistance: CGFloat { width * Self.commitRatio }
     private var isReady: Bool { width > 0 && drag.offset >= commitDistance }
 
@@ -53,7 +58,17 @@ private struct RoutineCreateSwipe: ViewModifier {
 
             content
                 .background(AppColor.background.ignoresSafeArea())
-                .shadow(color: AppColor.black.opacity(offset > 0 ? AppOpacity.subtle : 0), radius: 12)
+                // 밀리는 동안 홈을 둥근 카드로 보이게 한다. 상태 표시줄·홈 인디케이터 영역까지 같은 모양으로 자른다.
+                .mask {
+                    RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                        .ignoresSafeArea()
+                }
+                .background {
+                    RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                        .fill(AppColor.background)
+                        .shadow(color: AppColor.black.opacity(offset > 0 ? AppOpacity.overlay : 0), radius: 24)
+                        .ignoresSafeArea()
+                }
                 .offset(x: offset)
                 .allowsHitTesting(!isCommitting)
         }

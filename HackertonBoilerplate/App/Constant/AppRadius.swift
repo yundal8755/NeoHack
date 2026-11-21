@@ -15,4 +15,6 @@ enum AppRadius {
     static let button: CGFloat = 12
     /// 바텀시트 위쪽 모서리.
     static let sheet: CGFloat = 20
+    /// 옆으로 밀려나는 화면 전체 카드. 기기 화면 모서리와 비슷하게 둥글게 한다.
+    static let slidingScreen: CGFloat = 44
 }

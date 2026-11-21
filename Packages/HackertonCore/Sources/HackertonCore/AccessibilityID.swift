@@ -34,6 +34,7 @@ public enum AccessibilityID {
         public static let allCommentsButton = "routineDetail.allCommentsButton"
         public static let participateButton = "routineDetail.participateButton"
         public static let commentField = "routineDetail.commentField"
+        public static let dismissKeyboardButton = "routineDetail.dismissKeyboardButton"
         public static let submitCommentButton = "routineDetail.submitCommentButton"
     }
     public enum RoutineParticipants {

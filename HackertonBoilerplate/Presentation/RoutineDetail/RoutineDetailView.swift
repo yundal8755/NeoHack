@@ -518,6 +518,18 @@ struct RoutineDetailView: View {
                     .frame(minWidth: 44, minHeight: 44)
                     .accessibilityIdentifier(AccessibilityID.RoutineDetail.submitCommentButton)
             }
+            if isCommentFocused {
+                Button { isCommentFocused = false } label: {
+                    Image(systemName: "keyboard.chevron.compact.down")
+                        .font(.system(size: 20))
+                        .frame(width: 44, height: 44)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(AppColor.textSecondary)
+                .accessibilityLabel("키보드 내리기")
+                .accessibilityIdentifier(AccessibilityID.RoutineDetail.dismissKeyboardButton)
+            }
         }
     }
 

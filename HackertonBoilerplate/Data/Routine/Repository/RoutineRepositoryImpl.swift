@@ -52,6 +52,12 @@ final class RoutineRepositoryImpl: RoutineRepository {
             as: APIResponseDTO<ParticipationResultResponseDTO>.self)
         return try RoutineMapper.participationResult(response.value())
     }
+    func deleteParticipationResult(id: String, participantID: String) async throws {
+        let response = try await network.request(
+            RoutineEndpoint.deleteParticipationResult(id: id, participantID: participantID, headers: headers()),
+            as: APIDeleteResponseDTO.self)
+        try response.checkSuccess()
+    }
     func delete(id: String) async throws {
         let response = try await network.request(
             RoutineEndpoint.delete(id: id, headers: headers()), as: APIDeleteResponseDTO.self)

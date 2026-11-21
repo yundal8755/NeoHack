@@ -33,10 +33,31 @@ struct RoutineDetailView: View {
             AppTopBar(
                 store.state.title,
                 leading: .asset("CaretLeft", label: "뒤로가기") { closeDetail() },
-                trailing: .asset("DotsThree", label: "더보기", isEnabled: !store.state.isLive || store.state.isOwner) {
-                    if store.state.isOwner && store.state.isLive { isRoutineMenuPresented = true }
+                trailing: .asset("DotsThree", label: "더보기", isEnabled: !store.state.isBusy && (store.state.isOwner || store.state.isParticipationOwner)) {
+                    isRoutineMenuPresented.toggle()
                 }
             )
+            .overlay(alignment: .topTrailing) {
+                if isRoutineMenuPresented {
+                    Button(role: .destructive) {
+                        isRoutineMenuPresented = false
+                        isDeleteRoutinePresented = true
+                    } label: {
+                        Text(store.state.isParticipationResult ? "참여 기록 삭제" : "삭제하기")
+                            .appFont(AppFont.caption1)
+                            .foregroundStyle(.red)
+                            .frame(minWidth: 130, minHeight: 44)
+                            .padding(.horizontal, AppSpacing.sm)
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .background(AppColor.background, in: RoundedRectangle(cornerRadius: AppRadius.button))
+                    .shadow(color: AppColor.black.opacity(0.12), radius: 8, y: 3)
+                    .padding(.trailing, AppSpacing.md)
+                    .offset(y: 44)
+                }
+            }
+            .zIndex(1)
 
             if store.state.isLive && !store.state.loaded {
                 if let message = store.state.loadError {
@@ -110,17 +131,15 @@ struct RoutineDetailView: View {
             }
         }
         .task { if !store.state.loaded { store.send(.load) } }
-        .confirmationDialog("루틴 관리", isPresented: $isRoutineMenuPresented) {
-            if store.state.isOwner {
-                Button("삭제하기", role: .destructive) { isDeleteRoutinePresented = true }
+        .alert(store.state.isParticipationResult ? "참여 기록을 삭제하시겠습니까?" : "루틴을 정말로 삭제하시겠습니까?", isPresented: $isDeleteRoutinePresented) {
+            Button("취소", role: .cancel) {}
+            Button("삭제", role: .destructive) {
+                store.send(store.state.isParticipationResult ? .deleteParticipationResult : .deleteRoutine)
             }
-            Button("취소", role: .cancel) {}
-        }
-        .alert("루틴을 정말로 삭제하시겠습니까?", isPresented: $isDeleteRoutinePresented) {
-            Button("취소", role: .cancel) {}
-            Button("확인", role: .destructive) { store.send(.deleteRoutine) }
         } message: {
-            Text("삭제한 루틴은 목록에서 사라집니다.")
+            Text(store.state.isParticipationResult
+                 ? "작성한 참여 기록은 복구할 수 없어요. 원본 루틴은 유지됩니다."
+                 : "삭제한 루틴은 목록에서 사라집니다.")
         }
         .onChange(of: store.state.isDeleted) { _, deleted in
             if deleted {

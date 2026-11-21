@@ -58,8 +58,13 @@ struct HomeView: View {
                         participationCompletedID = UUID()
                         isProfilePresented = true
                     }, onBack: closeDetail) {
-                        store.send(.removed(route.id))
-                        deletedRoutineID = route.id
+                        if route.participantID != nil {
+                            participationCompletedID = UUID()
+                            isProfilePresented = true
+                        } else {
+                            store.send(.removed(route.id))
+                            deletedRoutineID = route.id
+                        }
                     }
                     .id(route)
                 } else if let detail = route.preview {

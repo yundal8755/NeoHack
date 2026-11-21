@@ -51,6 +51,11 @@ nonisolated enum RoutineEndpoint {
         try APIEndpoint(method: .get,
                         path: "api/routines/\(Mapping.pathID(id))/participation-results/\(Mapping.pathID(participantID))")
     }
+    static func deleteParticipationResult(id: String, participantID: String, headers: [String: String]) throws -> APIEndpoint {
+        try APIEndpoint(method: .delete,
+                        path: "api/routines/\(Mapping.pathID(id))/participation-results/\(Mapping.pathID(participantID))",
+                        headers: headers)
+    }
     static func delete(id: String, headers: [String: String]) throws -> APIEndpoint {
         APIEndpoint(method: .delete, path: "api/routines/\(try Mapping.pathID(id))", headers: headers)
     }

@@ -1,22 +1,24 @@
 import HackertonCore
-import HackertonMocks
 import MVICore
 import SwiftUI
 
 struct HomeView: View {
     @ObservedObject private var store: StoreOf<HomeReducer>
-    private let onRefresh: () async -> Void
+    private let session: ProfileSession?
+    private let onSwitchAccount: () -> Void
+    @State private var path: [String] = []
     @State private var isPickingRoutineImages = false
     @State private var isSortExpanded = false
     @State private var isProfilePresented = false
 
-    init(store: StoreOf<HomeReducer>, onRefresh: @escaping () async -> Void = {}) {
+    init(store: StoreOf<HomeReducer>, session: ProfileSession? = nil, onSwitchAccount: @escaping () -> Void = {}) {
         self.store = store
-        self.onRefresh = onRefresh
+        self.session = session
+        self.onSwitchAccount = onSwitchAccount
     }
 
     var body: some View {
-        NavigationStack {
+        NavigationStack(path: $path) {
             VStack(spacing: 0) {
                 AppTopBar("서비스명", trailing: .asset("User", label: "마이프로필") {
                     isProfilePresented = true
@@ -41,26 +43,37 @@ struct HomeView: View {
                 isPickingRoutineImages = true
             }
             .toolbar(.hidden, for: .navigationBar)
-            .navigationDestination(for: Int.self) { id in
-                if let routine = store.state.routines.first(where: { $0.id == id }) {
+            .navigationDestination(for: String.self) { id in
+                if let session {
+                    HomeRoutineDetailDestination(id: id, session: session) { store.send(.removed(id)) }
+                } else if let routine = store.state.routines.first(where: { $0.id == id }) {
                     HomeRoutineDetailDestination(state: routine.detail)
                 }
             }
+            .onChange(of: isProfilePresented) { _, presented in
+                if !presented { store.send(.refresh) }
+            }
             .navigationDestination(isPresented: $isProfilePresented) {
-                // shortcut: 프로필 프레임이 아직 없어 진입 화면만 제공한다. 디자인 전달 후 MyProfileView로 교체한다.
-                VStack(spacing: 0) {
-                    AppTopBar("마이프로필", leading: .asset("CaretLeft", label: "뒤로가기") {
-                        isProfilePresented = false
-                    })
-                    EmptyView(title: "마이프로필", message: "프로필 화면을 준비하고 있어요.", systemImage: "person")
-                        .padding(AppSpacing.md)
-                    Spacer()
+                if let session {
+                    MyProfileView(session: session, onSwitchAccount: onSwitchAccount)
+                } else {
+                    VStack {
+                        AppTopBar("마이프로필", leading: .asset("CaretLeft", label: "뒤로가기") {
+                            isProfilePresented = false
+                        })
+                        EmptyView(title: "마이프로필", message: "프로필 화면을 준비하고 있어요.", systemImage: "person")
+                        Spacer()
+                    }
+                    .background(AppColor.background)
+                    .toolbar(.hidden, for: .navigationBar)
                 }
-                .background(AppColor.background)
-                .toolbar(.hidden, for: .navigationBar)
             }
         }
-        .routineCreateFlow(isPickingImages: $isPickingRoutineImages)
+        .task { store.send(.appeared) }
+        .routineCreateFlow(isPickingImages: $isPickingRoutineImages, repositories: session?.repositories) { id in
+            store.send(.refresh)
+            path.append(id)
+        }
         .accessibilityIdentifier(AccessibilityID.Root.homeScreen)
     }
 
@@ -130,22 +143,38 @@ struct HomeView: View {
     private var routineList: some View {
                 ScrollView {
                     LazyVStack(spacing: 0) {
-                        if store.state.routines.isEmpty {
+                        if store.state.isLoading && store.state.routines.isEmpty {
+                            ProgressView().padding(.top, AppSpacing.lg)
+                        } else if let error = store.state.error, store.state.routines.isEmpty {
+                            ErrorView(title: "루틴 목록을 불러오지 못했어요", message: error, retryTitle: "다시 시도") { store.send(.refresh) }
+                        } else if store.state.routines.isEmpty {
                             EmptyView(title: "아직 루틴이 없어요", message: "+ 버튼을 눌러 나만의 루틴을 만들어보세요.")
                                 .padding(.top, AppSpacing.lg)
                         }
-                        ForEach(store.state.sortedRoutines) { routine in
+                        ForEach(store.state.routines) { routine in
                             NavigationLink(value: routine.id) {
                                 routineRow(routine)
                             }
                             .buttonStyle(.plain)
                             .accessibilityIdentifier(AccessibilityID.Home.routine(routine.id))
+                            .onAppear { store.send(.nextPage(routine.id)) }
+                        }
+                        if !store.state.routines.isEmpty {
+                            if store.state.isLoading { ProgressView().padding() }
+                            if let error = store.state.error {
+                                ErrorView(title: "루틴 목록을 불러오지 못했어요", message: error, retryTitle: "다시 시도") { store.send(.refresh) }
+                            }
                         }
                     }
                     .padding(.horizontal, AppSpacing.md)
                     .padding(.bottom, 88)
                 }
-                .refreshable { await onRefresh() }
+                .refreshable {
+                    store.send(.refresh)
+                    while store.state.isLoading && !Task.isCancelled {
+                        try? await Task.sleep(for: .milliseconds(50))
+                    }
+                }
                 .scrollBounceBehavior(.always)
     }
 
@@ -153,10 +182,7 @@ struct HomeView: View {
         HStack(alignment: .top, spacing: AppSpacing.sm) {
             VStack(alignment: .leading, spacing: 0) {
                 HStack(alignment: .firstTextBaseline, spacing: AppSpacing.xs) {
-                    Image("RoutineDetailAvatar")
-                        .resizable()
-                        .frame(width: 35, height: 35)
-                        .accessibilityHidden(true)
+                    ProfileAvatar(url: routine.avatarURL, size: 35)
                     ViewThatFits(in: .horizontal) {
                         HStack(alignment: .firstTextBaseline, spacing: AppSpacing.xs) {
                             authorName(routine.nickname)
@@ -196,7 +222,7 @@ struct HomeView: View {
             .frame(maxWidth: .infinity, alignment: .leading)
 
             Group {
-                if let url = routine.detail.steps.first?.imageURL {
+                if let url = routine.thumbnailURL ?? routine.detail.steps.first?.imageURL {
                     NetworkImageView(
                         url: url, cornerRadius: AppRadius.button,
                         downsamplingSize: CGSize(width: 115, height: 115),
@@ -216,8 +242,8 @@ struct HomeView: View {
         Text(name).appFont(AppFont.body2).foregroundStyle(AppColor.grayBlack)
     }
 
-    private func createdDate(_ date: Date) -> some View {
-        Text(Self.dateFormatter.string(from: date))
+    private func createdDate(_ date: Date?) -> some View {
+        Text(date.map(Self.dateFormatter.string(from:)) ?? "")
             .appFont(AppFont.caption2)
             .foregroundStyle(AppColor.gray500)
     }
@@ -233,7 +259,11 @@ struct HomeView: View {
     private func routineCounts(_ routine: HomeReducer.Routine) -> some View {
         HStack(spacing: AppSpacing.buttonPadding) {
             count(routine.detail.isLiked ? "HomeHeartFilled" : "Heart", value: routine.detail.likeCount)
-            count("ChatCircle", value: routine.detail.commentCount)
+            if let participants = routine.participantCount {
+                count("User", value: participants)
+            } else if !routine.isServerRow {
+                count("ChatCircle", value: routine.detail.commentCount)
+            }
         }
     }
 
@@ -259,16 +289,30 @@ struct HomeView: View {
     }
 }
 
-private struct HomeRoutineDetailDestination: View {
+struct HomeRoutineDetailDestination: View {
     @StateObject private var store: StoreOf<RoutineDetailReducer>
+    private let onDelete: () -> Void
+
+    init(id: String, session: ProfileSession, onDelete: @escaping () -> Void) {
+        var state = RoutineDetailReducer.State(title: "루틴 상세")
+        state.isLive = true
+        _store = StateObject(wrappedValue: StoreOf<RoutineDetailReducer>(
+            state: state, reducer: RoutineDetailReducer(
+                id: id, userID: session.profile.id, routines: session.repositories.routines,
+                comments: session.repositories.comments)))
+        self.onDelete = onDelete
+    }
 
     init(state: RoutineDetailReducer.State) {
         _store = StateObject(wrappedValue: StoreOf<RoutineDetailReducer>(state: state, reducer: RoutineDetailReducer()))
+        onDelete = {}
     }
 
-    var body: some View { RoutineDetailView(store: store) }
+    var body: some View { RoutineDetailView(store: store, onDelete: onDelete) }
 }
 
-#Preview("홈") {
+#if DEBUG
+#Preview {
     HomeView(store: StoreOf<HomeReducer>(state: MockRoutineData.home, reducer: HomeReducer()))
 }
+#endif

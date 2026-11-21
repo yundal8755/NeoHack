@@ -7,7 +7,8 @@ public enum AccessibilityID {
     public enum Home {
         public static let sortButton = "home.sortButton"
         public static let createButton = "home.createButton"
-        public static func routine(_ id: Int) -> String { "home.routine.\(id)" }
+        public static func routine(_ id: Int) -> String { routine(String(id)) }
+        public static func routine(_ id: String) -> String { "home.routine.\(id)" }
     }
     public enum RoutineDetail {
         public static let screen = "routineDetail.screen"

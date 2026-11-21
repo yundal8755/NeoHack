@@ -1,11 +1,10 @@
 import HackertonCore
-import HackertonMocks
 import MVICore
 import SwiftUI
 
 struct RoutineDetailView: View {
     @ObservedObject private var store: StoreOf<RoutineDetailReducer>
-    @State private var deletingCommentID: Int?
+    @State private var deletingCommentID: String?
     @State private var isDeleteRoutinePresented = false
     @State private var isRoutineMenuPresented = false
     @State private var isCommentsPresented = false
@@ -13,8 +12,11 @@ struct RoutineDetailView: View {
     @Environment(\.dismiss) private var dismiss
     @FocusState private var isCommentFocused: Bool
 
-    init(store: StoreOf<RoutineDetailReducer>) {
+    private let onDelete: () -> Void
+
+    init(store: StoreOf<RoutineDetailReducer>, onDelete: @escaping () -> Void = {}) {
         self.store = store
+        self.onDelete = onDelete
     }
 
     var body: some View {
@@ -25,57 +27,66 @@ struct RoutineDetailView: View {
                 trailing: .asset("DotsThree", label: "더보기") { isRoutineMenuPresented = true }
             )
 
-            ScrollViewReader { proxy in
-                ScrollView {
-                    VStack(alignment: .leading, spacing: 0) {
-                        ForEach(Array(store.state.steps.enumerated()), id: \.element.id) { index, step in
-                            stepCard(step, number: index + 1)
-                        }
-
-                        ViewThatFits(in: .horizontal) {
-                            HStack(spacing: AppSpacing.md) {
-                                statistics {
-                                    withAnimation { proxy.scrollTo("commentPreviewEnd", anchor: .bottom) }
-                                }
-                                Spacer(minLength: 0)
-                                participateButton
-                            }
-                            VStack(alignment: .leading, spacing: AppSpacing.xs) {
-                                statistics {
-                                    withAnimation { proxy.scrollTo("commentPreviewEnd", anchor: .bottom) }
-                                }
-                                participateButton
-                            }
-                        }
-                        .padding(.top, AppSpacing.xs)
-                        .padding(.bottom, AppSpacing.xxs)
-
-                        VStack(spacing: AppSpacing.xxs) {
-                            ForEach(Array(store.state.comments.prefix(5))) { comment in
-                                commentRow(comment, showsActions: false)
-                            }
-                        }
-
-                        Button {
-                            isCommentsPresented = true
-                        } label: {
-                            Text("댓글 전체보기")
-                                .appFont(AppFont.caption1)
-                                .foregroundStyle(AppColor.textSecondary)
-                                .frame(maxWidth: .infinity, minHeight: 44)
-                                .contentShape(Rectangle())
-                        }
-                        .buttonStyle(.plain)
-                        .accessibilityIdentifier(AccessibilityID.RoutineDetail.allCommentsButton)
-                        .padding(.bottom, AppSpacing.md)
-                        .id("commentPreviewEnd")
-
-                    }
-                    .padding(.horizontal, AppSpacing.md)
+            if store.state.isLive && !store.state.loaded {
+                if let message = store.state.loadError {
+                    ErrorView(title: "루틴을 불러오지 못했어요", message: message, retryTitle: "다시 시도") { store.send(.load) }
+                } else {
+                    ProgressView().frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
-                .scrollDismissesKeyboard(.interactively)
+            } else {
+                ScrollViewReader { proxy in
+                    ScrollView {
+                        VStack(alignment: .leading, spacing: 0) {
+                            ForEach(Array(store.state.steps.enumerated()), id: \.element.id) { index, step in
+                                stepCard(step, number: index + 1)
+                            }
+
+                            ViewThatFits(in: .horizontal) {
+                                HStack(spacing: AppSpacing.md) {
+                                    statistics {
+                                        withAnimation { proxy.scrollTo("commentPreviewEnd", anchor: .bottom) }
+                                    }
+                                    Spacer(minLength: 0)
+                                    participateButton
+                                }
+                                VStack(alignment: .leading, spacing: AppSpacing.xs) {
+                                    statistics {
+                                        withAnimation { proxy.scrollTo("commentPreviewEnd", anchor: .bottom) }
+                                    }
+                                    participateButton
+                                }
+                            }
+                            .padding(.top, AppSpacing.xs)
+                            .padding(.bottom, AppSpacing.xxs)
+
+                            VStack(spacing: AppSpacing.xxs) {
+                                ForEach(Array(store.state.comments.prefix(5))) { comment in
+                                    commentRow(comment, showsActions: false)
+                                }
+                            }
+
+                            Button {
+                                isCommentsPresented = true
+                            } label: {
+                                Text("댓글 전체보기")
+                                    .appFont(AppFont.caption1)
+                                    .foregroundStyle(AppColor.textSecondary)
+                                    .frame(maxWidth: .infinity, minHeight: 44)
+                                    .contentShape(Rectangle())
+                            }
+                            .buttonStyle(.plain)
+                            .accessibilityIdentifier(AccessibilityID.RoutineDetail.allCommentsButton)
+                            .padding(.bottom, AppSpacing.md)
+                            .id("commentPreviewEnd")
+
+                        }
+                        .padding(.horizontal, AppSpacing.md)
+                    }
+                    .scrollDismissesKeyboard(.interactively)
+                }
             }
         }
+        .task { if !store.state.loaded { store.send(.load) } }
         .confirmationDialog("루틴 관리", isPresented: $isRoutineMenuPresented) {
             if store.state.isOwner {
                 Button("삭제하기", role: .destructive) { isDeleteRoutinePresented = true }
@@ -86,9 +97,14 @@ struct RoutineDetailView: View {
             Button("취소", role: .cancel) {}
             Button("확인", role: .destructive) { store.send(.deleteRoutine) }
         } message: {
-            Text("현재는 미리보기 화면만 닫으며 서버 데이터는 삭제하지 않습니다.")
+            Text("삭제한 루틴은 목록에서 사라집니다.")
         }
-        .onChange(of: store.state.isDeleted) { _, deleted in if deleted { dismiss() } }
+        .onChange(of: store.state.isDeleted) { _, deleted in
+            if deleted {
+                dismiss()
+                onDelete()
+            }
+        }
         .sheet(isPresented: $isCommentsPresented) {
             commentsSheet
                 .presentationDetents([.medium, .large])
@@ -99,7 +115,7 @@ struct RoutineDetailView: View {
         .accessibilityIdentifier(AccessibilityID.RoutineDetail.screen)
         .feedbackPopup(Binding(
             get: {
-                store.state.notice.map { FeedbackMessage(id: feedbackID, kind: .info, title: "안내", message: $0) }
+                store.state.notice.map { FeedbackMessage(id: feedbackID, kind: .error, title: "요청을 처리하지 못했어요", message: $0) }
             },
             set: { if $0 == nil { store.send(.noticeDismissed) } }
         ))
@@ -152,8 +168,9 @@ struct RoutineDetailView: View {
     private func statistics(onComments: @escaping () -> Void) -> some View {
         HStack(spacing: AppSpacing.buttonPadding) {
             Button { store.send(.likeTapped) } label: {
-                countLabel("Heart", count: store.state.likeCount)
+                countLabel(store.state.isLiked && store.state.isLive ? "HomeHeartFilled" : "Heart", count: store.state.likeCount)
             }
+            .disabled(store.state.isBusy)
             .accessibilityLabel("좋아요 \(store.state.likeCount)개")
             .accessibilityIdentifier(AccessibilityID.RoutineDetail.likeButton)
 
@@ -183,16 +200,28 @@ struct RoutineDetailView: View {
         .contentShape(Rectangle())
     }
 
+    @ViewBuilder
     private var participateButton: some View {
-        PrimaryButton(store.state.participation.rawValue) { store.send(.participateTapped) }
-            .disabled(store.state.participation == .completed)
-            .frame(minWidth: 100, maxWidth: 130)
-            .accessibilityIdentifier(AccessibilityID.RoutineDetail.participateButton)
+        if !store.state.isLive || !store.state.isOwner {
+            if store.state.isLive && store.state.participation == .joined {
+                VStack(spacing: AppSpacing.xxs) {
+                    PrimaryButton("참여 완료") { store.send(.participateTapped) }
+                        .accessibilityIdentifier(AccessibilityID.RoutineDetail.participateButton)
+                    Button("참여 취소") { store.send(.leaveTapped) }
+                        .font(.footnote)
+                }
+                .disabled(store.state.isBusy)
+            } else {
+                PrimaryButton(store.state.participation.rawValue) { store.send(.participateTapped) }
+                    .disabled(store.state.participation == .completed || store.state.isBusy)
+                    .accessibilityIdentifier(AccessibilityID.RoutineDetail.participateButton)
+            }
+        }
     }
 
     private func commentRow(_ comment: RoutineDetailReducer.Comment, showsActions: Bool = true) -> some View {
         HStack(alignment: .top, spacing: AppSpacing.md) {
-            avatar
+            ProfileAvatar(url: comment.avatarURL, size: 41)
             VStack(alignment: .leading, spacing: AppSpacing.xxs) {
                 ViewThatFits(in: .horizontal) {
                     HStack(spacing: AppSpacing.xs) {
@@ -259,6 +288,7 @@ struct RoutineDetailView: View {
                 }
                 if store.state.canSubmitComment {
                     Button(store.state.editingCommentID == nil ? "등록" : "수정 완료") { store.send(.submitCommentTapped) }
+                        .disabled(store.state.isBusy)
                         .font(AppFont.calloutStrong)
                         .foregroundStyle(AppColor.primary)
                         .frame(minWidth: 44, minHeight: 44)
@@ -317,9 +347,12 @@ struct RoutineDetailView: View {
 
 }
 
+#if DEBUG
 #Preview("루틴 상세") {
     RoutineDetailView(store: StoreOf<RoutineDetailReducer>(
         state: MockRoutineData.detail,
         reducer: RoutineDetailReducer()
     ))
 }
+
+#endif

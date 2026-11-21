@@ -2,15 +2,17 @@ import Foundation
 
 final class ImageRepositoryImpl: ImageRepository {
     private let network: NetworkManager
+    private let userID: String?
     private let deviceToken: () throws -> String
 
-    init(networkManager: NetworkManager, deviceToken: @escaping () throws -> String) {
+    init(networkManager: NetworkManager, deviceToken: @escaping () throws -> String, userID: String? = nil) {
         self.network = networkManager
         self.deviceToken = deviceToken
+        self.userID = userID
     }
 
     private func headers() throws -> [String: String] {
-        try Mapping.deviceHeaders(deviceToken)
+        try Mapping.deviceHeaders(deviceToken, userID: userID)
     }
 
     func upload(input: ImageUploadInput) async throws -> UploadedImageEntity {

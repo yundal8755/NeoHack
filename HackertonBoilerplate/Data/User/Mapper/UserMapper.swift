@@ -2,6 +2,6 @@ nonisolated enum UserMapper {
     static func map(_ dto: UserResponseDTO) throws -> UserEntity {
         try UserEntity(
             id: Mapping.identity(dto.publicId, "publicId"), nickname: Mapping.required(dto.nickname, "nickname"),
-            profileImageID: dto.profileImagePublicId)
+            profileImageID: dto.profileImagePublicId, bio: dto.bio)
     }
 }

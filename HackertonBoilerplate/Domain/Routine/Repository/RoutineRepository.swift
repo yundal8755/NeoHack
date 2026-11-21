@@ -5,5 +5,6 @@ nonisolated protocol RoutineRepository {
     func detail(id: String) async throws -> RoutineDetailEntity
     func create(input: RoutineSaveInput) async throws -> RoutineDetailEntity
     func update(id: String, input: RoutineSaveInput) async throws -> RoutineDetailEntity
+    func interactions(id: String, change: RoutineInteractions.Change?) async throws -> RoutineInteractions
     func delete(id: String) async throws
 }

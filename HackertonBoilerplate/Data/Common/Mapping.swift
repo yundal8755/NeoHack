@@ -23,11 +23,14 @@ nonisolated enum Mapping {
     }
     static func date(_ value: String?, _ field: String) throws -> Date? {
         guard let value else { return nil }
+        // The server also returns Seoul local timestamps without a zone.
+        let localPattern = #"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?$"#
+        let timestamp = value.range(of: localPattern, options: .regularExpression) == nil ? value : value + "+09:00"
         let formatter = ISO8601DateFormatter()
         formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-        if let date = formatter.date(from: value) { return date }
+        if let date = formatter.date(from: timestamp) { return date }
         formatter.formatOptions = [.withInternetDateTime]
-        guard let date = formatter.date(from: value) else { throw DataContractError.invalidValue(field) }
+        guard let date = formatter.date(from: timestamp) else { throw DataContractError.invalidValue(field) }
         return date
     }
     static func pathID(_ value: String) throws -> String {
@@ -36,7 +39,7 @@ nonisolated enum Mapping {
         }
         return value
     }
-    static func deviceHeaders(_ token: () throws -> String) throws -> [String: String] {
+    static func deviceHeaders(_ token: () throws -> String, userID: String? = nil) throws -> [String: String] {
         let value = try token()
         guard !value.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
             value.count <= 255,
@@ -44,6 +47,8 @@ nonisolated enum Mapping {
         else {
             throw DataContractError.missingDeviceToken
         }
-        return ["X-Device-Token": value]
+        var headers = ["X-Device-Token": value]
+        if let userID { headers["X-User-Id"] = try pathID(userID) }
+        return headers
     }
 }

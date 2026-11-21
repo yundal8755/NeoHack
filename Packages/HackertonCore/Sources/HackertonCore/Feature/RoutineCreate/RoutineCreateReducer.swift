@@ -8,7 +8,7 @@ import MVICore
 /// - 마지막 스텝에서 다음을 누르면 루틴 소개 화면으로 간다.
 /// - 나가기: 입력한 내용이 있으면 확인 알럿을 띄우고, 없으면 바로 나간다.
 ///
-/// 저장 API가 아직 없어 완료하면 `State.outcome`에 `RoutineDraft`를 담는다. 화면을 띄운 쪽이 이 값을 받아 처리한다.
+/// 작성이 끝나면 `State.outcome`에 `RoutineDraft`를 담는다. 화면을 띄운 쪽이 이 값을 받아 처리한다.
 public struct RoutineCreateReducer: Reducer {
     /// 한 루틴에 고를 수 있는 이미지(스텝) 최대 개수.
     public static let maxStepCount = 4
@@ -140,6 +140,7 @@ public struct RoutineCreateReducer: Reducer {
         case routineIntroductionChanged(String)
         case previousTapped
         case nextTapped
+        case outcomeHandled
         case completeTapped
         case exitTapped
         case exitCancelled
@@ -188,6 +189,8 @@ public struct RoutineCreateReducer: Reducer {
             guard case let .step(index) = state.page, state.isNextEnabled else { break }
             state.page = index + 1 < state.steps.count ? .step(index + 1) : .introduction
 
+        case .outcomeHandled:
+            state.outcome = nil
         case .completeTapped:
             guard state.page == .introduction, state.isCompleteEnabled else { break }
             state.outcome = .completed(makeDraft(from: state))

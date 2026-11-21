@@ -23,4 +23,23 @@ final class AppContainer {
         self.networkManager = NetworkManager(authInterceptor: AuthInterceptor(tokenStore: tokenStore))
         AppLogger.debug("App container initialized")
     }
+
+    struct ProfileRepositories {
+        let users: any UserRepository
+        let routines: any RoutineRepository
+        let comments: any RoutineCommentRepository
+        let images: any ImageRepository
+    }
+
+    func profiles(deviceToken: String) -> any UserRepository {
+        UserRepositoryImpl(networkManager: networkManager, deviceToken: { deviceToken })
+    }
+
+    func session(token: String, userID: String) -> ProfileRepositories {
+        ProfileRepositories(
+            users: UserRepositoryImpl(networkManager: networkManager, deviceToken: { token }, userID: userID),
+            routines: RoutineRepositoryImpl(networkManager: networkManager, deviceToken: { token }, userID: userID),
+            comments: RoutineCommentRepositoryImpl(networkManager: networkManager, deviceToken: { token }, userID: userID),
+            images: ImageRepositoryImpl(networkManager: networkManager, deviceToken: { token }, userID: userID))
+    }
 }

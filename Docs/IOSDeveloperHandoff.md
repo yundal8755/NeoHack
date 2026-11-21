@@ -40,7 +40,7 @@ git push origin dev
 - UI 계층의 View·Reducer·State·Action에는 DTO를 사용하지 않습니다. 요청 DTO 생성과 응답 디코딩·매핑은 Repository 구현체가 담당하며, UI는 기본 타입이나 앱 입력 모델로 값을 전달합니다.
 - 필요한 Entity 필드·타입을 서버 연결 담당에게 전달합니다.
 - 서버 응답 DTO 해석과 Mapper 구현은 서버 연결 담당이 맡습니다.
-- 현재는 Data·Domain의 Entity·Repository까지 준비하며 Presentation과 기존 mock에는 연결하지 않습니다. DTO를 UI에 연결하지 않습니다.
+- 홈·루틴 상세·작성·프로필은 Repository를 통해 실제 Entity를 사용합니다. 테스트와 Preview는 별도 fixture를 사용합니다.
 
 ## 서버 연결·테스트·기타 작업
 
@@ -48,7 +48,7 @@ git push origin dev
 - 앱 `Domain/<DomainName>/Entity`에 서버 형식과 분리된 모델을 구성합니다.
 - 실제 서버 응답을 DTO로 받고 Mapper를 통해 Entity로 변환해 전달합니다.
 - Repository 프로토콜에는 DTO를 노출하지 않고, 요청 DTO 생성은 구현체 내부에서 처리합니다. Entity는 준비하고 화면 연결은 이후 별도 작업으로 진행합니다.
-- Repository는 NetworkManager와 기기 토큰 공급 함수를 주입받습니다. AppContainer·UI 연결은 이후 작업입니다.
+- AppContainer는 선택한 계정의 Repository를 구성하고 화면의 Reducer에 주입합니다.
 - 서버 응답, 매핑 결과, 화면 연결을 테스트하고 정상·빈 결과·오류 상황을 확인합니다.
 - 실행·설정 문제와 기타 필요한 작업을 처리합니다.
 

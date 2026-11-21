@@ -1,6 +1,6 @@
 # 테스트 가이드
 
-MVI의 세 부분을 나눠 검증한다. State 전이와 Effect는 로컬 패키지에서 `swift test`로 몇 초 만에 확인하고, 화면과 핵심 흐름은 시뮬레이터에서 확인한다.
+MVI의 세 부분을 나눠 검증한다. 공통 MVI와 폼 검증은 로컬 패키지에서 확인하고, 서버 Repository를 사용하는 화면과 Reducer는 시뮬레이터에서 검증한다.
 
 ## 계층
 
@@ -45,7 +45,7 @@ HackertonBoilerplateUITests/
 
 ## Reducer 테스트
 
-의존성은 Reducer의 init으로 받는다. 기존 패키지의 테스트 대역은 HackertonMocks를 사용한다. 새 앱 Domain의 Repository는 패키지 Reducer가 import할 수 없으므로 실제 연동 시 Reducer 위치 또는 Domain 모듈 분리를 먼저 결정한다. 현재 화면에는 연결하지 않는다.
+의존성은 Reducer의 init으로 받는다. 기존 패키지의 테스트 대역은 HackertonMocks를 사용한다. 홈·상세 Reducer는 앱 타깃에서 Domain Repository를 주입받으며, 앱 테스트 번들에서 요청과 State 변경을 검증한다.
 
 State 전이는 `reduce`를 직접 호출하고, 경계값은 파라미터 테스트로 한 번에 확인한다. 네트워크가 끼면 안 되는 테스트에는 `unimplemented`를 넣는다. 호출되면 테스트가 실패한다.
 
@@ -126,3 +126,5 @@ git config core.hooksPath .githooks
 - 테스트 타깃을 추가·삭제하면 `.githooks/pre-commit`의 `REQUIRED_TESTABLES`도 함께 고친다.
 
 DataDomain 테스트는 URLProtocol과 주입한 Alamofire Session을 사용하여 실서버에 접속하지 않는다. Snapshot·UI 테스트와 별도로 실행하며 기준 이미지를 기록하지 않는다. 기본 iOS 26.2 런타임이 없으면 TEST_DESTINATION에 설치된 시뮬레이터를 지정한다.
+
+실제 계정 선택과 Keychain 저장을 시뮬레이터에서 확인할 때는 Xcode의 기본 서명으로 실행한다. 서명을 끈 빌드는 시뮬레이터에서 Keychain 저장에 실패할 수 있다. 공개 데모 프로필 정보는 Swagger의 헤더 예시를 사용한다.

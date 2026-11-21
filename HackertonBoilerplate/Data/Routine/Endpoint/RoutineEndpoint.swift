@@ -28,6 +28,19 @@ nonisolated enum RoutineEndpoint {
         return try APIEndpoint(
             method: id == nil ? .post : .put, path: path, headers: headers, body: RoutineMapper.request(input))
     }
+    static func interactions(
+        id: String, change: RoutineInteractions.Change?, headers: [String: String]
+    ) throws -> APIEndpoint {
+        let route: (HTTPMethod, String) = switch change {
+        case nil: (.get, "interactions")
+        case .like: (.put, "like")
+        case .unlike: (.delete, "like")
+        case .join: (.put, "participation")
+        case .leave: (.delete, "participation")
+        case .complete: (.put, "participation/completion")
+        }
+        return APIEndpoint(method: route.0, path: "api/routines/\(try Mapping.pathID(id))/\(route.1)", headers: headers)
+    }
     static func delete(id: String, headers: [String: String]) throws -> APIEndpoint {
         APIEndpoint(method: .delete, path: "api/routines/\(try Mapping.pathID(id))", headers: headers)
     }

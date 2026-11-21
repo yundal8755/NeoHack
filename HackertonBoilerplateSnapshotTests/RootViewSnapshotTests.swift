@@ -1,3 +1,4 @@
+import HackertonCore
 import SnapshotTesting
 import SwiftUI
 import Testing
@@ -16,6 +17,6 @@ import Testing
 @Suite(.snapshots(record: .missing))
 struct RootViewSnapshotTests {
     @Test func rootView() {
-        assertSnapshot(of: RootView(), as: .screen)
+        assertSnapshot(of: RootView(container: AppContainer(configuration: .init(dataMode: .mock(.default)))), as: .screen)
     }
 }

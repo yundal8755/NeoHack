@@ -6,38 +6,49 @@ import SwiftUI
 extension View {
     /// 루틴 만들기 흐름: 사진을 최대 4장 고르면 고른 순서대로 스텝을 만들어 루틴 작성 화면을 띄운다.
     /// 각 스텝의 시간은 사진 촬영 시각(없으면 지금)을 5분 단위로 내려 미리 채운다.
-    func routineCreateFlow(isPickingImages: Binding<Bool>) -> some View {
-        modifier(RoutineCreateFlow(isPresented: isPickingImages))
+    func routineCreateFlow(
+        isPickingImages: Binding<Bool>,
+        repositories: AppContainer.ProfileRepositories?,
+        onCreated: @escaping (String) -> Void
+    ) -> some View {
+        modifier(RoutineCreateFlow(isPresented: isPickingImages, repositories: repositories, onCreated: onCreated))
     }
 }
 
 private struct RoutineCreateFlow: ViewModifier {
     @Binding var isPresented: Bool
 
+    let repositories: AppContainer.ProfileRepositories?
+    let onCreated: (String) -> Void
+
     @State private var feedback: FeedbackMessage?
+    @State private var createdID: String?
 
     func body(content: Content) -> some View {
         content
             // 사진 선택 시트를 먼저 띄운 뒤 전체 화면을 띄우면 전체 화면의 safe area가 0이 되어
             // 상단바가 상태 표시줄 아래로 들어간다(iOS 26.2). 전체 화면을 먼저 띄우고 그 안에서 사진을 고른다.
-            .fullScreenCover(isPresented: $isPresented) {
-                RoutineCreateEntry(onFinish: finish)
+            .fullScreenCover(isPresented: $isPresented, onDismiss: {
+                if let createdID {
+                    onCreated(createdID)
+                    self.createdID = nil
+                }
+            }) {
+                RoutineCreateEntry(repositories: repositories, onFinish: finish)
             }
             .feedbackPopup($feedback)
     }
 
     private func finish(_ result: RoutineCreateEntry.Result) {
-        isPresented = false
         switch result {
         case .cancelled:
             break
         case .failedToLoad:
             feedback = FeedbackMessage(kind: .error, title: "사진을 불러오지 못했어요", message: "다른 사진을 골라 주세요.")
-        case let .completed(draft):
-            // TODO: 루틴 저장 Repository가 생기면 draft를 저장하고 루틴 상세 화면으로 이동한다.
-            AppLogger.info("루틴 작성 완료: \(draft.title), 스텝 \(draft.steps.count)개")
-            feedback = FeedbackMessage(kind: .success, title: "루틴을 만들었어요", message: draft.title)
+        case let .created(id):
+            createdID = id
         }
+        isPresented = false
     }
 }
 
@@ -46,10 +57,15 @@ private struct RoutineCreateEntry: View {
     enum Result {
         case cancelled
         case failedToLoad
-        case completed(RoutineDraft)
+        case created(String)
     }
 
+    let repositories: AppContainer.ProfileRepositories?
     let onFinish: (Result) -> Void
+
+    @State private var saver: RoutineDraftSaver?
+    @State private var saving: Task<Void, Never>?
+    @State private var saveError: FeedbackMessage?
 
     @State private var isPickerPresented = false
     @State private var selection: [PhotosPickerItem] = []
@@ -62,7 +78,9 @@ private struct RoutineCreateEntry: View {
                 RoutineCreateView(store: store) { outcome in
                     switch outcome {
                     case .cancelled: onFinish(.cancelled)
-                    case let .completed(draft): onFinish(.completed(draft))
+                    case let .completed(draft):
+                        store.send(.outcomeHandled)
+                        save(draft)
                     }
                 }
             } else {
@@ -74,6 +92,11 @@ private struct RoutineCreateEntry: View {
                     .accessibilityIdentifier(AccessibilityID.RoutineCreate.entry)
             }
         }
+        .disabled(saving != nil)
+        .interactiveDismissDisabled(saving != nil)
+        .overlay { if saving != nil { ProgressView("루틴을 저장하고 있어요").padding().background(.regularMaterial) } }
+        .feedbackPopup($saveError)
+        .onDisappear { saving?.cancel() }
         .photosPicker(
             isPresented: $isPickerPresented,
             selection: $selection,
@@ -96,6 +119,24 @@ private struct RoutineCreateEntry: View {
                 try? await Task.sleep(for: .milliseconds(300))
                 if selection.isEmpty, !isLoading, store == nil {
                     onFinish(.cancelled)
+                }
+            }
+        }
+    }
+
+    private func save(_ draft: RoutineDraft) {
+        guard saving == nil, let repositories else { return }
+        let saver = self.saver ?? RoutineDraftSaver(images: repositories.images, routines: repositories.routines)
+        self.saver = saver
+        saving = Task {
+            defer { saving = nil }
+            do {
+                let detail = try await saver.save(draft)
+                if !Task.isCancelled { onFinish(.created(detail.id)) }
+            } catch {
+                if !Task.isCancelled {
+                    saveError = FeedbackMessage(kind: .error, title: "루틴을 저장하지 못했어요",
+                                                message: error.localizedDescription)
                 }
             }
         }

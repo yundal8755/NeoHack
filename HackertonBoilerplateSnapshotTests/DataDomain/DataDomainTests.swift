@@ -1,5 +1,7 @@
 import Alamofire
 import Foundation
+import HackertonCore
+import MVICore
 import Testing
 
 @testable import HackertonBoilerplate
@@ -12,6 +14,149 @@ struct DataDomainTests {
 
     private func decode<T: Decodable>(_ type: T.Type, _ json: String) throws -> T {
         try CodableManager.shared.responseDecoder.decode(type, from: Data(json.utf8))
+    }
+
+    @Test func liveContractFields() throws {
+        let local = try Mapping.date("2026-11-22T00:45:42.72887", "createdAt")
+        let utc = try Mapping.date("2026-11-21T15:45:42.72887Z", "createdAt")
+        #expect(local == utc)
+        let response = try decode(RoutineDetailResponseDTO.self, """
+            {"routineId":"routine","title":"루틴 제목","cards":[
+              {"cardId":"later","order":2,"imageId":"image","title":"두 번째","time":"09:00"},
+              {"cardId":"first","order":1,"imageId":"image","title":"첫 번째","time":"08:00","imageUrl":"https://example.com/card"}
+            ]}
+            """)
+        let detail = try RoutineMapper.detail(response)
+        #expect(detail.cards?.map(\.id) == ["first", "later"])
+        #expect(detail.cards?.first?.imageURL?.path == "/card")
+    }
+
+    @Test func selectedProfileAndInteractionRoutes() async throws {
+        let expected = [
+            "/interactions": "GET", "/participation/completion": "PUT"
+        ]
+        let manager = network { request in
+            #expect(request.value(forHTTPHeaderField: "X-Device-Token") == token)
+            #expect(request.value(forHTTPHeaderField: "X-User-Id") == id)
+            let path = request.url?.path ?? ""
+            if path == "/api/users/me" {
+                return (200, Data("""
+                    {"isSuccess":true,"result":{"publicId":"\(id)","nickname":"프로필","bio":"한 줄"}}
+                    """.utf8))
+            }
+            for (suffix, method) in expected where path.hasSuffix(suffix) {
+                #expect(request.httpMethod == method)
+            }
+            return (200, Data(#"{"isSuccess":true,"result":{"likeCount":1,"likedByMe":true,"inProgressCount":2,"completedCount":3,"myParticipationStatus":"COMPLETED"}}"#.utf8))
+        }
+        let user = UserRepositoryImpl(networkManager: manager, deviceToken: { token }, userID: id)
+        #expect(try await user.me().id == id)
+        let routines = RoutineRepositoryImpl(networkManager: manager, deviceToken: { token }, userID: id)
+        for (change, method, suffix) in [
+            (nil, "GET", "/interactions"), (RoutineInteractions.Change.like, "PUT", "/like"),
+            (.unlike, "DELETE", "/like"), (.join, "PUT", "/participation"),
+            (.leave, "DELETE", "/participation"), (.complete, "PUT", "/participation/completion")
+        ] {
+            let request = try RoutineEndpoint.interactions(id: id, change: change, headers: [:]).asURLRequest()
+            #expect(request.httpMethod == method)
+            #expect(request.url?.path.hasSuffix(suffix) == true)
+            #expect(try await routines.interactions(id: id, change: change).participation == .completed)
+        }
+    }
+
+    @Test func homeLoadsServerOrderAndNextCursor() async throws {
+        let manager = network { request in
+            let items = URLComponents(url: request.url!, resolvingAgainstBaseURL: false)?.queryItems ?? []
+            let sort = items.first { $0.name == "sort" }?.value
+            let cursor = items.first { $0.name == "cursor" }?.value
+            let result: String
+            if sort == "likes" {
+                result = #"{"routines":[{"routineId":"c","title":"인기 루틴"}],"hasNext":false}"#
+            } else if cursor == "next" {
+                result = #"{"routines":[{"routineId":"a","title":"중복"},{"routineId":"b","title":"다음 루틴"}],"hasNext":false}"#
+            } else {
+                result = #"{"routines":[{"routineId":"a","title":"첫 루틴"}],"hasNext":true,"nextCursor":"next"}"#
+            }
+            return (200, Data("{\"isSuccess\":true,\"result\":\(result)}".utf8))
+        }
+        let repo = RoutineRepositoryImpl(networkManager: manager, deviceToken: { token })
+        let store = StoreOf<HomeReducer>(state: .init(), reducer: HomeReducer(repository: repo))
+        store.send(.appeared)
+        try await waitUntil { store.state.loaded }
+        #expect(store.state.routines.map(\.id) == ["a"])
+        store.send(.nextPage("a"))
+        try await waitUntil { !store.state.isLoading }
+        #expect(store.state.routines.map(\.id) == ["a", "b"])
+        store.send(.sortChanged(.likes))
+        try await waitUntil { !store.state.isLoading }
+        #expect(store.state.routines.map(\.id) == ["c"])
+    }
+
+    @Test func commentFailurePreservesDraftAndServerResultReplacesIt() async throws {
+        let manager = network { request in
+            if request.httpMethod == "POST" {
+                return (500, Data(#"{"isSuccess":false,"code":"TEST500","message":"다시 시도"}"#.utf8))
+            }
+            return (200, Data())
+        }
+        let comments = RoutineCommentRepositoryImpl(networkManager: manager, deviceToken: { token })
+        let reducer = RoutineDetailReducer(id: id, comments: comments)
+        var initial = RoutineDetailReducer.State(title: "루틴")
+        initial.loaded = true
+        let store = StoreOf<RoutineDetailReducer>(state: initial, reducer: reducer)
+        store.send(.commentChanged("  댓글  "))
+        store.send(.submitCommentTapped)
+        try await waitUntil { store.state.notice != nil }
+        #expect(store.state.comments.isEmpty)
+        #expect(store.state.commentDraft == "  댓글  ")
+        // On retry the actual returned comment, including its server ID, replaces the draft.
+        store.send(.commentSaved(.init(
+            id: id, authorNickname: "사용자", profileImageURL: nil, content: "댓글",
+            createdAt: nil, isMine: true)))
+        #expect(store.state.comments.first?.id == id)
+        #expect(store.state.commentDraft.isEmpty)
+        #expect(store.state.commentCount == 1)
+    }
+
+    @Test func draftRetryReusesUploadedImages() async throws {
+        var uploads = 0
+        var saves = 0
+        let manager = network { request in
+            if request.url?.path == "/api/images" {
+                uploads += 1
+                return (201, Data("""
+                    {"isSuccess":true,"result":{"imageId":"\(id)"}}
+                    """.utf8))
+            }
+            saves += 1
+            if saves == 1 {
+                return (500, Data(#"{"isSuccess":false,"code":"TEST500","message":"다시 시도"}"#.utf8))
+            }
+            return (201, Data("""
+                {"isSuccess":true,"result":{"routineId":"\(id)","title":"루틴 제목"}}
+                """.utf8))
+        }
+        let saver = RoutineDraftSaver(
+            images: ImageRepositoryImpl(networkManager: manager, deviceToken: { token }),
+            routines: RoutineRepositoryImpl(networkManager: manager, deviceToken: { token }))
+        let draft = RoutineDraft(title: "루틴 제목", introduction: nil, steps: [
+            .init(image: .init(data: Data([1])), time: .init(hour: 7, minute: 0), title: "아침 운동하기", content: nil),
+            .init(image: .init(data: Data([2])), time: .init(hour: 8, minute: 0), title: "아침 준비하기", content: nil)
+        ])
+        await #expect(throws: NetworkError.apiError(code: "TEST500", message: "다시 시도")) {
+            try await saver.save(draft)
+        }
+        #expect(try await saver.save(draft).id == id)
+        #expect(saves == 2)
+        #expect(uploads == 2)
+    }
+
+    private func waitUntil(_ condition: @MainActor () -> Bool) async throws {
+        for _ in 0..<100 {
+            if condition() { return }
+            try await Task.sleep(for: .milliseconds(20))
+        }
+        try #require(condition())
     }
 
     @Test func dtoAndMapper() throws {
@@ -56,6 +201,60 @@ struct DataDomainTests {
         #expect(try ImageMapper.map(image).byteSize == 42)
     }
 
+    @Test func userBioDTOAndMapping() throws {
+        let json = #"{"isSuccess":true,"result":{"publicId":"user","nickname":"닉네임","profileImagePublicId":"image","bio":"매일 조금씩 운동해요."}}"#
+        let dto = try decode(APIResponseDTO<UserResponseDTO>.self, json).value()
+        #expect(dto.bio == "매일 조금씩 운동해요.")
+        let entity = try UserMapper.map(dto)
+        #expect(entity.bio == dto.bio)
+        #expect(entity.profileImageID == "image")
+        for bioJSON in ["", #","bio":null"#, #","bio":"""#] {
+            let userJSON = "{\"publicId\":\"user\",\"nickname\":\"닉네임\"\(bioJSON)}"
+            let user = try decode(UserResponseDTO.self, userJSON)
+            #expect(try UserMapper.map(user).bio == (bioJSON.contains("\"\"") ? "" : nil))
+        }
+        let target = try UserEndpoint.create(nickname: "닉네임", bio: "한 줄 소개", headers: [:])
+        let body = try #require(target.asURLRequest().httpBody)
+        let encoded = try JSONSerialization.jsonObject(with: body) as? [String: String]
+        #expect(encoded == ["nickname": "닉네임", "bio": "한 줄 소개"])
+        let absent = try JSONEncoder().encode(UserCreateRequestDTO(nickname: "닉네임"))
+        #expect(try JSONSerialization.jsonObject(with: absent) as? [String: String] == ["nickname": "닉네임"])
+        _ = try UserEndpoint.create(nickname: "닉네임", bio: String(repeating: "가", count: 100), headers: [:])
+        for invalid in [String(repeating: "가", count: 101), "첫 줄\n둘째 줄", "첫 줄\r둘째 줄", "첫 줄\u{000B}둘째 줄", "첫 줄\u{000C}둘째 줄", "첫 줄\u{0085}둘째 줄", "첫 줄\u{2028}둘째 줄", "첫 줄\u{2029}둘째 줄"] {
+            #expect(throws: DataContractError.invalidValue("bio")) {
+                try UserEndpoint.create(nickname: "닉네임", bio: invalid, headers: [:])
+            }
+        }
+    }
+
+    @Test func userBioRepositoryRoundTrip() async throws {
+        let manager = network { request in
+            #expect(request.value(forHTTPHeaderField: "X-Device-Token") == token)
+            if request.httpMethod == "POST" {
+                var data = request.httpBody ?? Data()
+                if let stream = request.httpBodyStream {
+                    stream.open()
+                    defer { stream.close() }
+                    var buffer = [UInt8](repeating: 0, count: 1024)
+                    while stream.hasBytesAvailable {
+                        let count = stream.read(&buffer, maxLength: buffer.count)
+                        if count <= 0 { break }
+                        data.append(contentsOf: buffer.prefix(count))
+                    }
+                }
+                let body = try JSONSerialization.jsonObject(with: data) as? [String: String]
+                #expect(body?["bio"] == "한 줄 소개")
+            }
+            let user = #"{"publicId":"user","nickname":"닉네임","bio":"한 줄 소개"}"#
+            let result = request.url?.path == "/api/users" && request.httpMethod == "GET" ? "[\(user)]" : user
+            return (request.httpMethod == "POST" ? 201 : 200, Data("{\"isSuccess\":true,\"result\":\(result)}".utf8))
+        }
+        let repository: any UserRepository = UserRepositoryImpl(networkManager: manager, deviceToken: { token })
+        #expect(try await repository.create(nickname: "닉네임", bio: "한 줄 소개").bio == "한 줄 소개")
+        #expect(try await repository.me().bio == "한 줄 소개")
+        #expect(try await repository.list().first?.bio == "한 줄 소개")
+    }
+
     @Test(arguments: ["bad", "2026-99-99T00:00:00Z", ""])
     func invalidDate(value: String) {
         #expect(throws: DataContractError.invalidValue("date")) { try Mapping.date(value, "date") }
@@ -83,7 +282,7 @@ struct DataDomainTests {
         ] {
             try decode(APIDeleteResponseDTO.self, json).checkSuccess()
         }
-        #expect(throws: (any Error).self) { try decode(RoutineCardResponseDTO.self, #"{"title":"제목"}"#) }
+        #expect(try decode(RoutineCardResponseDTO.self, #"{"title":"제목"}"#).imageId == nil)
     }
 
     private var input: RoutineSaveInput {

@@ -27,10 +27,12 @@ final class KeychainTokenStore: TokenStoring {
     }
 
     private func save(_ token: String) {
-        clear()
+        let value = [kSecValueData as String: Data(token.utf8)]
+        let status = SecItemUpdate(query as CFDictionary, value as CFDictionary)
+        guard status == errSecItemNotFound else { return }
 
         var item = query
-        item[kSecValueData as String] = Data(token.utf8)
+        item.merge(value) { _, new in new }
         item[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly
         SecItemAdd(item as CFDictionary, nil)
     }

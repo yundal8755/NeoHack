@@ -215,7 +215,7 @@ struct DataDomainTests {
             users: UserRepositoryImpl(networkManager: manager, accessToken: { token }),
             images: ImageRepositoryImpl(networkManager: manager, accessToken: { token }))
         let store = StoreOf<MyProfileReducer>(state: .init(nickname: "이전 이름", introduction: "이전 소개"), reducer: reducer)
-        store.send(.beginEditing)
+        store.send(.editTapped)
         store.send(.nicknameChanged("새 이름"))
         store.send(.bioChanged("  "))
         store.send(.photoChanged(.init(data: Data("photo".utf8), fileName: "profile.jpg", mimeType: "image/jpeg")))

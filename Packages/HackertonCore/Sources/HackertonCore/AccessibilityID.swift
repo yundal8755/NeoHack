@@ -7,6 +7,7 @@ public enum AccessibilityID {
     public enum MyProfile {
         public static let screen = "myProfile.screen"
         public static let editButton = "myProfile.editButton"
+        public static let editScreen = "myProfile.edit.screen"
         public static let editPhoto = "myProfile.edit.photo"
         public static let editNickname = "myProfile.edit.nickname"
         public static let editBio = "myProfile.edit.bio"

@@ -6,16 +6,21 @@ nonisolated struct UserProfileUpdate: Equatable, Sendable {
         case clear
     }
 
+    /// 닉네임 허용 길이.
+    static let nicknameLength = 2...10
+    /// 한 줄 소개 최대 길이.
+    static let bioMaxLength = 50
+
     var nickname: String? = nil
     var bio: BioChange? = nil
     var profileImageID: String? = nil
 
     func validate() throws {
-        if let nickname, !(2...10).contains(nickname.count) {
+        if let nickname, !Self.nicknameLength.contains(nickname.count) {
             throw ValidationError.nickname
         }
         if case let .set(value) = bio,
-            value.count > 50 || value.contains(where: \.isNewline)
+            value.count > Self.bioMaxLength || value.contains(where: \.isNewline)
         {
             throw ValidationError.bio
         }
